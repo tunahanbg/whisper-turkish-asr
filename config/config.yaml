@@ -3,19 +3,33 @@
 
 # Model Konfigürasyonu
 model:
-    name: "whisper"
-    variant: "medium" # tiny, base, small, medium, large
-    device: "cpu" # mps (Apple Silicon), cuda, cpu - MPS'de NaN hatası var, CPU kullan
-    compute_type: "float32" # float16, float32, int8 - CPU float16 desteklemiyor
-    download_root: "./checkpoints"
-
-    # Alternative models (gelecekte kullanım için)
+    # Model seçimi: "whisper" veya "faster-whisper"
+    # faster-whisper: 3-4x daha hızlı, daha az memory, int8 quantization
+    name: "faster-whisper" # "whisper" | "faster-whisper" | "mlx_whisper"
+    
+    variant: "base" # tiny, base, small, medium, large (küçük = hızlı)
+    device: "cpu" # cpu, cuda (MPS desteklenmiyor)
+    compute_type: "int8" # int8 (en hızlı), int16, float16, float32
+    
+    # Model paths
+    download_root: "./checkpoints" # Pre-trained models için
+    model_path: null # Custom/fine-tuned model için (örn: "./my_model" veya HF model ID)
+    
+    # Faster-Whisper özel ayarlar
+    num_workers: 1 # Paralel işlem sayısı
+    cpu_threads: 4 # CPU thread sayısı
+    
+    # Alternative models (gelecek için)
     alternatives:
+        whisper:
+            enabled: true
+            notes: "Standard Whisper (느림 ama %95 accuracy)"
         faster_whisper:
-            enabled: false
-            model_size: "medium"
+            enabled: true
+            notes: "CTranslate2 optimized (3-4x hızlı)"
         mlx_whisper:
             enabled: false
+            notes: "Apple Silicon native (en hızlı, sadece Mac)"
 
 # Dil Ayarları
 language:

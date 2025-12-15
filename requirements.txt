@@ -4,6 +4,7 @@ torch>=2.0.0
 torchaudio>=2.0.0
 
 # Alternative Whisper Implementations (for optimization)
+# faster-whisper: CTranslate2-based, 3-4x faster, lower memory
 faster-whisper>=0.10.0
 
 # Audio Processing

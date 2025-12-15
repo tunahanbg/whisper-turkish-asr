@@ -9,13 +9,14 @@ from loguru import logger
 
 from config import config
 from .whisper_model import WhisperASR
+from .faster_whisper_model import FasterWhisperASR
 
 
 class ModelType(Enum):
     """Desteklenen model tipleri."""
     WHISPER = "whisper"
-    FASTER_WHISPER = "faster_whisper"
-    MLX_WHISPER = "mlx_whisper"
+    FASTER_WHISPER = "faster-whisper"  # Config'le uyumlu
+    MLX_WHISPER = "mlx-whisper"  # Config'le uyumlu
 
 
 class ModelManager:
@@ -79,10 +80,16 @@ class ModelManager:
         model.load()
         return model
     
-    def _load_faster_whisper(self, **kwargs):
-        """Faster-Whisper model'i yükle (gelecek için)."""
-        logger.warning("Faster-Whisper not yet implemented")
-        raise NotImplementedError("Faster-Whisper support coming soon")
+    def _load_faster_whisper(self, **kwargs) -> FasterWhisperASR:
+        """
+        Faster-Whisper model'i yükle.
+        
+        CTranslate2 ile optimize edilmiş, 3-4x daha hızlı.
+        Custom/fine-tuned model desteği var.
+        """
+        model = FasterWhisperASR(**kwargs)
+        model.load()
+        return model
     
     def _load_mlx_whisper(self, **kwargs):
         """MLX Whisper model'i yükle (Apple Silicon native - gelecek için)."""

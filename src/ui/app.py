@@ -470,7 +470,6 @@ def main():
         """
         <div style='text-align: center'>
             <p>Gazi Üniversitesi - Bilgisayar Mühendisliği</p>
-            <p>Tunahan Başaran Güneysu</p>
         </div>
         """,
         unsafe_allow_html=True
