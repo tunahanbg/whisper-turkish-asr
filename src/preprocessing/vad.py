@@ -25,11 +25,8 @@ class VoiceActivityDetector:
         self.config = custom_config or config.get('vad', {})
         self.enabled = self.config.get('enabled', True)
         
-        if not self.enabled:
-            logger.info("VAD disabled")
-            return
-        
-        # VAD parametreleri
+        # FIX: VAD parametrelerini enabled olmasına bakılmaksızın her zaman initialize et
+        # Böylece __repr__ ve diğer metodlar AttributeError almaz
         self.threshold = self.config.get('threshold', 0.5)
         self.min_speech_duration_ms = self.config.get('min_speech_duration_ms', 250)
         self.max_speech_duration_s = self.config.get('max_speech_duration_s', 600)
@@ -40,9 +37,15 @@ class VoiceActivityDetector:
         # Sample rate
         self.sample_rate = config.get('audio.sample_rate', 16000)
         
-        # Model'i yükle
+        # Model'i sadece enabled ise yükle
         self.model = None
         self.utils = None
+        
+        if not self.enabled:
+            logger.info("VAD disabled - parameters initialized but model not loaded")
+            return
+        
+        # Model'i yükle
         self._load_model()
         
         logger.info(f"VAD initialized - Threshold: {self.threshold}, "
