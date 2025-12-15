@@ -197,9 +197,17 @@ def transcribe_audio(audio: np.ndarray, language: str = None) -> dict:
         audio_normalized = audio.astype(np.float32)
         max_amplitude = np.abs(audio_normalized).max()
         
-        if max_amplitude < 0.001:
-            logger.error("Audio is nearly SILENT! Cannot transcribe.")
-            st.error("❌ Ses çok sessiz veya bozuk! Mikrofon ayarlarınızı kontrol edin.")
+        # RMS (Root Mean Square) hesapla - daha güvenilir sessizlik tespiti
+        rms = np.sqrt(np.mean(audio_normalized ** 2))
+        
+        logger.debug(f"Audio analysis - max_amplitude: {max_amplitude:.6f}, rms: {rms:.6f}")
+        
+        # Sessizlik kontrolü (çok agresif)
+        # RMS < 0.01 veya max amplitude < 0.02 ise tamamen sessizdir
+        if rms < 0.01 or max_amplitude < 0.02:
+            logger.warning(f"Audio is nearly SILENT - RMS: {rms:.6f}, Max: {max_amplitude:.6f}")
+            st.warning("⚠️ **Tamamen sessizlik tespit edildi!**")
+            st.info("💡 Lütfen konuşarak kayıt yapın. Sessiz kayıtlar transkripsiyon için uygun değil.")
             return None
         
         if max_amplitude > 1.0:
@@ -372,37 +380,89 @@ def microphone_tab(language: str):
     with col2:
         if st.button("⏹️ Kaydı Durdur", disabled=not st.session_state.is_recording,
                     use_container_width=True):
-            if st.session_state.recorder:
+            # Double-stop ve segfault önleme
+            if st.session_state.recorder and st.session_state.is_recording:
+                try:
+                    # Önce recorder hala aktif mi kontrol et
+                    if st.session_state.recorder.is_recording:
+                        audio = st.session_state.recorder.stop_recording()
+                    else:
+                        # Thread zaten durdurmuş, sadece audio'yu al
+                        logger.info("Recording already stopped by VAD, retrieving audio...")
+                        audio = np.concatenate(st.session_state.recorder.recorded_audio) if st.session_state.recorder.recorded_audio else np.array([])
+                    
+                    st.session_state.is_recording = False
+                    
+                    if len(audio) > 0:
+                        # Transkribe et
+                        result = transcribe_audio(audio, language)
+                        
+                        # Result None olabilir (sessiz audio)
+                        if result:
+                            display_transcription_result(result)
+                    else:
+                        st.warning("⚠️ Ses kaydedilmedi!")
+                    
+                    st.session_state.recorder = None
+                    
+                except Exception as e:
+                    logger.error(f"Error during manual stop: {e}")
+                    st.error(f"❌ Kayıt durdurulurken hata: {e}")
+                    st.session_state.is_recording = False
+                    st.session_state.recorder = None
+    
+    # Kayıt durumu - GÖRÜNÜR ve VAD auto-stop kontrolü
+    if st.session_state.is_recording:
+        # VAD auto-stop kontrolü (thread durdu mu?)
+        if st.session_state.recorder and not st.session_state.recorder.is_recording:
+            # Thread kaydı durdurdu, session_state'i güncelle
+            logger.info("VAD auto-stop detected, cleaning up...")
+            
+            try:
                 audio = st.session_state.recorder.stop_recording()
                 st.session_state.is_recording = False
                 
                 if len(audio) > 0:
+                    st.success("✅ Kayıt otomatik durduruldu (sessizlik algılandı)")
                     # Transkribe et
                     result = transcribe_audio(audio, language)
                     
-                    # Result None olabilir (sessiz audio)
                     if result:
                         display_transcription_result(result)
                 else:
                     st.warning("⚠️ Ses kaydedilmedi!")
                 
+            except Exception as e:
+                logger.error(f"Error during VAD auto-stop cleanup: {e}")
+                st.error(f"❌ Kayıt sonlandırılırken hata: {e}")
+                st.session_state.is_recording = False
+            finally:
+                # Recorder'ı temizle
                 st.session_state.recorder = None
-    
-    # Kayıt durumu - GÖRÜNÜR
-    if st.session_state.is_recording:
-        # Büyük uyarı kutusu
-        st.markdown("""
-        <div style='background-color: #FF4444; padding: 15px; border-radius: 10px; text-align: center;'>
-            <h2 style='color: white; margin: 0;'>🔴 KAYIT DEVAM EDİYOR</h2>
-            <p style='color: white; margin: 5px 0 0 0;'>10 saniye sessizlik sonrası otomatik duracak</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Süreyi göster
-        if st.session_state.recorder:
-            duration = st.session_state.recorder.get_recording_duration()
-            st.metric("⏱️ Kayıt Süresi", f"{duration:.1f}s")
-            st.info("💡 Süreyi güncellemek için 'Kaydı Durdur' butonuna tıklayın.")
+            
+            # Transkripsiyon tamamlandıktan sonra rerun (yeni kayıt hazır)
+            # NOT: Bu rerun sadece cleanup sonrası, yeni kayıt başlamıyor
+            st.rerun()
+        else:
+            # Hala kayıt devam ediyor
+            # Büyük uyarı kutusu
+            st.markdown("""
+            <div style='background-color: #FF4444; padding: 15px; border-radius: 10px; text-align: center;'>
+                <h2 style='color: white; margin: 0;'>🔴 KAYIT DEVAM EDİYOR</h2>
+                <p style='color: white; margin: 5px 0 0 0;'>10 saniye sessizlik sonrası otomatik duracak</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Süreyi göster
+            if st.session_state.recorder:
+                duration = st.session_state.recorder.get_recording_duration()
+                st.metric("⏱️ Kayıt Süresi", f"{duration:.1f}s")
+                st.info("💡 Sessizlik algılanınca otomatik duracak veya manuel 'Kaydı Durdur' butonuna tıklayın.")
+            
+            # Otomatik refresh (sadece VAD kontrolü için, yeni kayıt başlatma!)
+            import time
+            time.sleep(1.0)  # 1 saniye bekle (0.5 çok agresif, sürekli rerun oluyor)
+            st.rerun()  # Sadece VAD durumunu kontrol et
     
     # Not: Gerçek zamanlı mikrofon kaydı için streamlit-webrtc kullanılabilir
     st.info("💡 **Not:** Mikrofon erişimi için browser izinleri gerekebilir.")

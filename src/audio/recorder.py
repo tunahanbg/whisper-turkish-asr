@@ -73,19 +73,22 @@ class AudioRecorder:
         # Mono'ya çevir (channels > 1 ise)
         audio_chunk = indata[:, 0].copy() if indata.ndim > 1 else indata.copy()
         
+        # DEBUG: İlk chunk'ta dtype ve range kontrolü (BEFORE gain)
+        is_first_chunk = len(self.recorded_audio) == 0
+        if is_first_chunk:
+            logger.debug(f"First audio chunk (before gain) - dtype: {audio_chunk.dtype}, "
+                        f"shape: {audio_chunk.shape}, "
+                        f"range: [{audio_chunk.min():.4f}, {audio_chunk.max():.4f}]")
+        
         # Input gain uygula (mikrofon sinyali düşükse amplify et)
         if self.input_gain != 1.0:
             audio_chunk = audio_chunk * self.input_gain
             # Clipping kontrolü [-1, 1] aralığında kal
             audio_chunk = np.clip(audio_chunk, -1.0, 1.0)
-        
-        # DEBUG: İlk chunk'ta dtype ve range kontrolü
-        if len(self.recorded_audio) == 0:
-            logger.debug(f"First audio chunk - dtype: {audio_chunk.dtype}, "
-                        f"shape: {audio_chunk.shape}, "
-                        f"range: [{audio_chunk.min():.4f}, {audio_chunk.max():.4f}]")
-            if self.input_gain != 1.0:
-                logger.info(f"Input gain applied: {self.input_gain}x")
+            
+            # İlk chunk'ta gain uygulandığını logla
+            if is_first_chunk:
+                logger.info(f"Input gain applied: {self.input_gain}x (after: [{audio_chunk.min():.4f}, {audio_chunk.max():.4f}])")
         
         # Queue'ya ekle
         self.audio_queue.put(audio_chunk)
@@ -171,23 +174,41 @@ class AudioRecorder:
         Returns:
             Recorded audio as numpy array
         """
-        if not self.is_recording:
+        # Double-stop koruması
+        if not self.is_recording and not self.recorded_audio and not self.stream:
             logger.warning("No recording in progress")
             return np.array([])
         
         try:
-            # Recording'i durdur
+            # Recording'i durdur (eğer hala çalışıyorsa)
+            was_recording = self.is_recording
             self.is_recording = False
             
-            # Stream'i kapat
+            # Stream'i HER DURUMDA kapat (VAD auto-stop sonrası bile açık kalabiliyor)
             if self.stream:
-                self.stream.stop()
-                self.stream.close()
-                self.stream = None
+                try:
+                    logger.debug("Closing audio stream...")
+                    self.stream.stop()
+                    self.stream.close()
+                    logger.debug("Audio stream closed successfully")
+                except Exception as e:
+                    logger.warning(f"Error closing stream: {e}")
+                finally:
+                    self.stream = None
             
-            # Thread'in bitmesini bekle
-            if hasattr(self, 'processing_thread'):
-                self.processing_thread.join(timeout=1.0)
+            # Thread'in bitmesini bekle (timeout ile, segfault önleme)
+            if hasattr(self, 'processing_thread') and self.processing_thread:
+                try:
+                    logger.debug("Waiting for processing thread to finish...")
+                    self.processing_thread.join(timeout=2.0)
+                    if self.processing_thread.is_alive():
+                        logger.warning("Processing thread did not finish in time")
+                    else:
+                        logger.debug("Processing thread finished successfully")
+                except Exception as e:
+                    logger.warning(f"Error joining thread: {e}")
+                finally:
+                    self.processing_thread = None
             
             # Queue'daki kalan chunk'ları al
             while not self.audio_queue.empty():

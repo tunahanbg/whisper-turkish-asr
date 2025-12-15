@@ -32,7 +32,7 @@ class BaseASR(ABC):
         """
         self.model_config = model_config
         self.model = None
-        self.is_loaded = False
+        self._is_loaded = False
     
     @abstractmethod
     def load(self) -> None:
@@ -40,7 +40,7 @@ class BaseASR(ABC):
         Load the model.
         
         Must be implemented by subclasses.
-        Should set self.is_loaded = True when successful.
+        Should set self._is_loaded = True when successful.
         """
         pass
     
@@ -76,13 +76,18 @@ class BaseASR(ABC):
         Unload the model from memory.
         
         Must be implemented by subclasses.
-        Should set self.is_loaded = False.
+        Should set self._is_loaded = False.
         """
         pass
     
-    def is_model_loaded(self) -> bool:
+    @property
+    def is_loaded(self) -> bool:
         """Check if model is loaded."""
-        return self.is_loaded
+        return self._is_loaded
+    
+    def is_model_loaded(self) -> bool:
+        """Check if model is loaded (deprecated, use is_loaded property)."""
+        return self._is_loaded
     
     def get_model_info(self) -> Dict[str, Any]:
         """
@@ -94,7 +99,7 @@ class BaseASR(ABC):
         return {
             'name': self.__class__.__name__,
             'config': self.model_config,
-            'loaded': self.is_loaded,
+            'loaded': self._is_loaded,
         }
     
     def format_output(
@@ -143,6 +148,6 @@ class BaseASR(ABC):
     
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}("
-                f"loaded={self.is_loaded}, "
+                f"loaded={self._is_loaded}, "
                 f"config={self.model_config})")
 

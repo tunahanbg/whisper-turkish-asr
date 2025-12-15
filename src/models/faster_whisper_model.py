@@ -125,7 +125,7 @@ class FasterWhisperASR(BaseASR):
                 cpu_threads=self.cpu_threads,
             )
             
-            self.is_loaded = True
+            self._is_loaded = True
             logger.info(f"Model loaded successfully on {self.device} "
                        f"(compute_type: {self.compute_type})")
             
@@ -134,7 +134,7 @@ class FasterWhisperASR(BaseASR):
             
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
-            self.is_loaded = False
+            self._is_loaded = False
             raise
     
     def transcribe(
@@ -251,7 +251,7 @@ class FasterWhisperASR(BaseASR):
         if self.is_loaded:
             del self.model
             self.model = None
-            self.is_loaded = False
+            self._is_loaded = False
             logger.info("Model unloaded from memory")
     
     def __repr__(self) -> str:

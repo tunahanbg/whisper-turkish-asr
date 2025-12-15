@@ -11,10 +11,9 @@ import whisper
 from loguru import logger
 
 from config import config
-from src.models.base_asr import BaseASR
 
 
-class WhisperASR(BaseASR):
+class WhisperASR:
     """
     Whisper model wrapper.
     Config'den tüm parametreleri alır, modelin değişmesi için sadece config güncellenir.
@@ -25,10 +24,7 @@ class WhisperASR(BaseASR):
         Args:
             custom_config: Özel model config (None = global config)
         """
-        # BaseASR initialization
-        model_config = custom_config or config.model_config
-        super().__init__(model_config)
-        
+        self.model_config = custom_config or config.model_config
         self.transcription_config = config.transcription_config
         
         # Model parametreleri
@@ -37,6 +33,10 @@ class WhisperASR(BaseASR):
         self.device = self._get_device()
         self.compute_type = self.model_config.get('compute_type', 'float16')
         self.download_root = self.model_config.get('download_root', './checkpoints')
+        
+        # Model henüz yüklenmedi
+        self.model = None
+        self._is_loaded = False
         
         logger.info(f"WhisperASR initialized - Variant: {self.variant}, Device: {self.device}")
     
@@ -58,7 +58,7 @@ class WhisperASR(BaseASR):
     
     def load(self) -> None:
         """Model'i yükle."""
-        if self.is_loaded:
+        if self._is_loaded:
             logger.debug("Model already loaded")
             return
         
@@ -183,10 +183,50 @@ class WhisperASR(BaseASR):
             logger.error(f"Language detection failed: {e}")
             return 'en'  # fallback
     
-    # format_output metodu BaseASR'da tanımlı (inherited)
+    def format_output(
+        self,
+        result: Dict[str, Any],
+        include_timestamps: bool = True,
+        include_segments: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Transkripsiyon çıktısını formatla.
+        
+        Args:
+            result: Whisper transcription result
+            include_timestamps: Timestamp bilgisi dahil et mi?
+            include_segments: Segment detayları dahil et mi?
+        
+        Returns:
+            Formatted output dictionary
+        """
+        output = {
+            'text': result['text'].strip(),
+            'language': result.get('language', 'unknown'),
+        }
+        
+        if include_segments and 'segments' in result:
+            segments = []
+            for seg in result['segments']:
+                segment_info = {
+                    'text': seg['text'].strip(),
+                }
+                
+                if include_timestamps:
+                    segment_info.update({
+                        'start': seg['start'],
+                        'end': seg['end'],
+                    })
+                
+                segments.append(segment_info)
+            
+            output['segments'] = segments
+        
+        return output
+    
     def unload(self) -> None:
         """Model'i bellekten kaldır."""
-        if self.is_loaded:
+        if self._is_loaded:
             del self.model
             self.model = None
             self._is_loaded = False
@@ -197,11 +237,15 @@ class WhisperASR(BaseASR):
             
             logger.info("Model unloaded from memory")
     
+    @property
+    def is_loaded(self) -> bool:
+        """Model yüklü mü?"""
+        return self._is_loaded
+    
     def __repr__(self) -> str:
         return (f"WhisperASR(variant={self.variant}, device={self.device}, "
-                f"loaded={self.is_loaded})")
+                f"loaded={self._is_loaded})")
     
     def __del__(self):
         """Destructor - model'i temizle."""
         self.unload()
-
