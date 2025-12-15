@@ -42,7 +42,9 @@ lightning_logs/
 *.ipynb_checkpoints/
 
 # Models (büyük model dosyaları)
-models/
+# Sadece root-level models/ ve checkpoint dosyalarını ignore et
+# src/models/ kaynak kodlarını ignore etme!
+/models/
 *.bin
 *.safetensors
 *.h5
