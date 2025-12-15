@@ -181,16 +181,36 @@ def transcribe_audio(audio: np.ndarray, language: str = None) -> dict:
     # Model'i yükle
     load_model()
     
-    # Ön işleme
-    with st.spinner("Ses işleniyor... 🔄"):
-        processed_audio = st.session_state.preprocessor.process(audio)
-    
-    # Transkripsiyon
+    # Transkripsiyon - Preprocessing DEVRE DIŞI (Whisper kendi preprocessing'ini yapıyor)
     with st.spinner("Transkripsiyon yapılıyor... ✍️"):
         start_time = time.time()
         
+        # Audio'yu Whisper'ın beklediği formata çevir
+        # Sounddevice float32 veriyor ama [-1, 1] aralığında olmayabilir
+        import numpy as np
+        
+        # DEBUG: Gelen audio'yu kontrol et
+        logger.info(f"Transcription input - dtype: {audio.dtype}, shape: {audio.shape}, "
+                   f"range: [{audio.min():.4f}, {audio.max():.4f}]")
+        
+        # Float32'ye çevir ve normalize et
+        audio_normalized = audio.astype(np.float32)
+        max_amplitude = np.abs(audio_normalized).max()
+        
+        if max_amplitude < 0.001:
+            logger.error("Audio is nearly SILENT! Cannot transcribe.")
+            st.error("❌ Ses çok sessiz veya bozuk! Mikrofon ayarlarınızı kontrol edin.")
+            return None
+        
+        if max_amplitude > 1.0:
+            logger.debug(f"Normalizing audio - max amplitude: {max_amplitude:.4f}")
+            audio_normalized = audio_normalized / max_amplitude
+        
+        logger.debug(f"Audio after normalization - range: [{audio_normalized.min():.4f}, "
+                    f"{audio_normalized.max():.4f}]")
+        
         model = st.session_state.model_manager.get_model()
-        result = model.transcribe(processed_audio, language=language)
+        result = model.transcribe(audio_normalized, language=language)
         
         elapsed_time = time.time() - start_time
         audio_duration = get_audio_duration(audio, config.get('audio.sample_rate'))
@@ -213,9 +233,17 @@ def display_transcription_result(result: dict):
     """Transkripsiyon sonucunu göster."""
     st.success("✅ Transkripsiyon Tamamlandı!")
     
-    # Ana metin
+    # Ana metin - BÜYÜK VE OKUNAKLI
     st.markdown("### 📝 Transkripsiyon")
-    st.markdown(f"**{result['text']}**")
+    st.markdown(f"""
+    <div style='background-color: #1E1E1E; padding: 20px; border-radius: 10px; border-left: 4px solid #4CAF50;'>
+        <p style='font-size: 18px; line-height: 1.6; color: #FFFFFF; margin: 0;'>
+            {result['text']}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("") # Spacer
     
     # Bilgiler
     col1, col2, col3, col4 = st.columns(4)
@@ -313,6 +341,17 @@ def microphone_tab(language: str):
     
     st.info("📌 Kaydı başlat butonuna tıklayın. VAD etkinse, sessizlik algılandığında kayıt otomatik durur.")
     
+    # Mikrofon Gain Ayarı
+    st.markdown("#### 🎚️ Mikrofon Seviyesi")
+    input_gain = st.slider(
+        "Mikrofon Gain (Ses çok düşükse artırın)",
+        min_value=1.0,
+        max_value=10.0,
+        value=3.0,
+        step=0.5,
+        help="Mikrofonunuzdan gelen ses çok düşükse bu değeri artırın. Önerilen: 3.0-5.0"
+    )
+    
     # Kayıt kontrolleri
     col1, col2 = st.columns(2)
     
@@ -320,7 +359,10 @@ def microphone_tab(language: str):
         if st.button("🔴 Kaydı Başlat", disabled=st.session_state.is_recording, 
                     type="primary", use_container_width=True):
             try:
-                st.session_state.recorder = AudioRecorder(vad=st.session_state.vad)
+                st.session_state.recorder = AudioRecorder(
+                    vad=st.session_state.vad,
+                    input_gain=input_gain
+                )
                 st.session_state.recorder.start_recording()
                 st.session_state.is_recording = True
                 st.rerun()
@@ -337,19 +379,30 @@ def microphone_tab(language: str):
                 if len(audio) > 0:
                     # Transkribe et
                     result = transcribe_audio(audio, language)
-                    display_transcription_result(result)
+                    
+                    # Result None olabilir (sessiz audio)
+                    if result:
+                        display_transcription_result(result)
                 else:
                     st.warning("⚠️ Ses kaydedilmedi!")
                 
                 st.session_state.recorder = None
     
-    # Kayıt durumu
+    # Kayıt durumu - GÖRÜNÜR
     if st.session_state.is_recording:
-        st.warning("🔴 Kayıt devam ediyor...")
+        # Büyük uyarı kutusu
+        st.markdown("""
+        <div style='background-color: #FF4444; padding: 15px; border-radius: 10px; text-align: center;'>
+            <h2 style='color: white; margin: 0;'>🔴 KAYIT DEVAM EDİYOR</h2>
+            <p style='color: white; margin: 5px 0 0 0;'>10 saniye sessizlik sonrası otomatik duracak</p>
+        </div>
+        """, unsafe_allow_html=True)
         
+        # Süreyi göster
         if st.session_state.recorder:
             duration = st.session_state.recorder.get_recording_duration()
-            st.metric("⏱️ Süre", f"{duration:.1f}s")
+            st.metric("⏱️ Kayıt Süresi", f"{duration:.1f}s")
+            st.info("💡 Süreyi güncellemek için 'Kaydı Durdur' butonuna tıklayın.")
     
     # Not: Gerçek zamanlı mikrofon kaydı için streamlit-webrtc kullanılabilir
     st.info("💡 **Not:** Mikrofon erişimi için browser izinleri gerekebilir.")

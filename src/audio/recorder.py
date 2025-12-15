@@ -24,11 +24,13 @@ class AudioRecorder:
         self,
         vad: Optional[VoiceActivityDetector] = None,
         callback: Optional[Callable] = None,
+        input_gain: float = 3.0,  # Mikrofon gain (düşük sinyali artır)
     ):
         """
         Args:
             vad: VoiceActivityDetector instance (None = yeni oluştur)
             callback: Her chunk için callback fonksiyonu
+            input_gain: Mikrofon sinyalini artırmak için çarpan (default: 3.0)
         """
         # Config'den ayarlar
         self.recording_config = config.get('recording', {})
@@ -40,6 +42,7 @@ class AudioRecorder:
         self.auto_stop = self.recording_config.get('auto_stop_silence', True)
         self.max_duration = self.recording_config.get('max_recording_duration', 600)
         self.buffer_size = self.recording_config.get('buffer_size', 1024)
+        self.input_gain = input_gain  # Mikrofon gain çarpanı
         
         # VAD
         self.vad = vad or VoiceActivityDetector()
@@ -54,7 +57,7 @@ class AudioRecorder:
         self.stream = None
         
         logger.debug(f"AudioRecorder initialized - SR: {self.sample_rate}Hz, "
-                    f"Auto-stop: {self.auto_stop}")
+                    f"Auto-stop: {self.auto_stop}, Input gain: {self.input_gain}x")
     
     def _audio_callback(
         self,
@@ -67,8 +70,22 @@ class AudioRecorder:
         if status:
             logger.warning(f"Recording status: {status}")
         
-        # Mono'ya çevir
+        # Mono'ya çevir (channels > 1 ise)
         audio_chunk = indata[:, 0].copy() if indata.ndim > 1 else indata.copy()
+        
+        # Input gain uygula (mikrofon sinyali düşükse amplify et)
+        if self.input_gain != 1.0:
+            audio_chunk = audio_chunk * self.input_gain
+            # Clipping kontrolü [-1, 1] aralığında kal
+            audio_chunk = np.clip(audio_chunk, -1.0, 1.0)
+        
+        # DEBUG: İlk chunk'ta dtype ve range kontrolü
+        if len(self.recorded_audio) == 0:
+            logger.debug(f"First audio chunk - dtype: {audio_chunk.dtype}, "
+                        f"shape: {audio_chunk.shape}, "
+                        f"range: [{audio_chunk.min():.4f}, {audio_chunk.max():.4f}]")
+            if self.input_gain != 1.0:
+                logger.info(f"Input gain applied: {self.input_gain}x")
         
         # Queue'ya ekle
         self.audio_queue.put(audio_chunk)
@@ -89,12 +106,13 @@ class AudioRecorder:
             self.recorded_audio = []
             self.audio_queue = queue.Queue()
             
-            # Stream'i aç
+            # Stream'i aç (dtype='float32' ZORUNLU!)
             self.stream = sd.InputStream(
                 device=self.device,
                 channels=self.channels,
                 samplerate=self.sample_rate,
                 blocksize=self.buffer_size,
+                dtype='float32',  # Whisper float32 bekliyor
                 callback=self._audio_callback,
             )
             
@@ -129,13 +147,15 @@ class AudioRecorder:
                     duration = len(full_audio) / self.sample_rate
                     if duration >= self.max_duration:
                         logger.info(f"Max duration reached: {duration:.1f}s")
-                        self.stop_recording()
+                        # Thread içinden stop_recording çağırma, sadece flag'i değiştir
+                        self.is_recording = False
                         break
                     
                     # Sessizlik kontrolü
                     if self.vad.should_stop_recording(full_audio, self.sample_rate):
-                        logger.info("Silence detected, stopping recording")
-                        self.stop_recording()
+                        logger.info("Silence detected, auto-stopping")
+                        # Thread içinden stop_recording çağırma, sadece flag'i değiştir
+                        self.is_recording = False
                         break
                 
             except queue.Empty:
@@ -181,8 +201,20 @@ class AudioRecorder:
             if self.recorded_audio:
                 audio = np.concatenate(self.recorded_audio)
                 duration = len(audio) / self.sample_rate
+                
+                # DEBUG: Audio detaylarını logla
                 logger.info(f"Recording stopped - Duration: {duration:.2f}s, "
-                          f"Samples: {len(audio)}")
+                          f"Samples: {len(audio)}, dtype: {audio.dtype}, "
+                          f"shape: {audio.shape}")
+                logger.debug(f"Audio stats - min: {audio.min():.4f}, "
+                            f"max: {audio.max():.4f}, "
+                            f"mean: {audio.mean():.4f}, "
+                            f"std: {audio.std():.4f}")
+                
+                # Audio sessiz mi kontrolü
+                if np.abs(audio).max() < 0.001:
+                    logger.warning("Audio is nearly silent! Max amplitude < 0.001")
+                
                 return audio
             else:
                 logger.warning("No audio recorded")
@@ -210,5 +242,6 @@ class AudioRecorder:
     def __repr__(self) -> str:
         return (f"AudioRecorder(sr={self.sample_rate}, "
                 f"recording={self.is_recording}, "
-                f"auto_stop={self.auto_stop})")
+                f"auto_stop={self.auto_stop}, "
+                f"gain={self.input_gain}x)")
 

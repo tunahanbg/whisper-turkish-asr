@@ -3,123 +3,124 @@
 
 # Model Konfigürasyonu
 model:
-  name: "whisper"
-  variant: "medium"  # tiny, base, small, medium, large
-  device: "mps"  # mps (Apple Silicon), cuda, cpu
-  compute_type: "float16"  # float16, float32, int8
-  download_root: "./checkpoints"
-  
-  # Alternative models (gelecekte kullanım için)
-  alternatives:
-    faster_whisper:
-      enabled: false
-      model_size: "medium"
-    mlx_whisper:
-      enabled: false
+    name: "whisper"
+    variant: "medium" # tiny, base, small, medium, large
+    device: "cpu" # mps (Apple Silicon), cuda, cpu - MPS'de NaN hatası var, CPU kullan
+    compute_type: "float32" # float16, float32, int8 - CPU float16 desteklemiyor
+    download_root: "./checkpoints"
+
+    # Alternative models (gelecekte kullanım için)
+    alternatives:
+        faster_whisper:
+            enabled: false
+            model_size: "medium"
+        mlx_whisper:
+            enabled: false
 
 # Dil Ayarları
 language:
-  default: null  # null = otomatik algılama
-  supported: ["tr", "en"]  # Türkçe ve İngilizce
-  
+    default: null # null = otomatik algılama
+    supported: ["tr", "en"] # Türkçe ve İngilizce
+
 # Ses İşleme Parametreleri
 audio:
-  sample_rate: 16000
-  channels: 1  # mono
-  format: "wav"
-  chunk_duration: 30  # saniye (Whisper için optimal)
-  
-  # Ön İşleme Ayarları
-  preprocessing:
-    enabled: true
-    normalize: true
-    trim_silence: true
-    trim_threshold_db: 20
-    denoise: false  # Whisper zaten gürültüye dayanıklı
-    noise_reduction_strength: 0.8
-    
+    sample_rate: 16000
+    channels: 1 # mono
+    format: "wav"
+    chunk_duration: 30 # saniye (Whisper için optimal)
+
+    # Ön İşleme Ayarları
+    # NOT: Preprocessing TAMAMEN DEVRE DIŞI çünkü Whisper kendi preprocessing'ini yapıyor
+    # Dış preprocessing audio'yu bozuyor ve yanlış transkripsiyon üretiyor
+    preprocessing:
+        enabled: false
+        normalize: false
+        trim_silence: false
+        trim_threshold_db: 20
+        denoise: false
+        noise_reduction_strength: 0.8
+
 # Voice Activity Detection (VAD)
 vad:
-  enabled: true
-  model: "silero"
-  threshold: 0.5  # 0-1 arası, yüksek = daha hassas
-  min_speech_duration_ms: 250
-  max_speech_duration_s: 600  # 10 dakika
-  min_silence_duration_ms: 10000  # 10 saniye
-  window_size_samples: 512
-  speech_pad_ms: 30  # Konuşma öncesi/sonrası padding
-  
+    enabled: true
+    model: "silero"
+    threshold: 0.5 # 0-1 arası, yüksek = daha hassas
+    min_speech_duration_ms: 250
+    max_speech_duration_s: 600 # 10 dakika
+    min_silence_duration_ms: 10000 # 10 saniye
+    window_size_samples: 512
+    speech_pad_ms: 30 # Konuşma öncesi/sonrası padding
+
 # Mikrofon Kaydı
 recording:
-  device: null  # null = varsayılan mikrofon
-  auto_stop_silence: true  # VAD ile otomatik durdurma
-  max_recording_duration: 600  # 10 dakika
-  buffer_size: 1024
-  
+    device: null # null = varsayılan mikrofon
+    auto_stop_silence: true # VAD ile otomatik durdurma
+    max_recording_duration: 600 # 10 dakika
+    buffer_size: 1024
+
 # Transkripsiyon Ayarları
 transcription:
-  task: "transcribe"  # transcribe veya translate
-  temperature: 0.0  # 0 = deterministik
-  beam_size: 5
-  best_of: 5
-  patience: 1.0
-  length_penalty: 1.0
-  compression_ratio_threshold: 2.4
-  log_prob_threshold: -1.0
-  no_speech_threshold: 0.6
-  condition_on_previous_text: true
-  initial_prompt: null  # Türkçe için: "Merhaba, bugün hava çok güzel."
-  word_timestamps: true
-  
+    task: "transcribe" # transcribe veya translate
+    temperature: 0.0 # 0 = deterministik (MPS ile 0.2 NaN hatası veriyor, CPU'da 0.0 güvenli)
+    beam_size: 5
+    best_of: 5
+    patience: 1.0
+    length_penalty: 1.0
+    compression_ratio_threshold: 2.4
+    # log_prob_threshold: -1.0  # Deprecated in newer Whisper versions
+    no_speech_threshold: 0.6
+    condition_on_previous_text: false # TRUE olunca pattern tekrarlarında halüsinasyon yapıyor!
+    initial_prompt: null # Türkçe için: "Merhaba, bugün hava çok güzel."
+    word_timestamps: false # MPS (Apple Silicon) float64 desteklemiyor, DTW ile uyumsuz
+
 # Fine-tuning Ayarları (Gelecek için)
 finetuning:
-  enabled: false
-  checkpoint_path: null
-  lora:
-    r: 32
-    alpha: 64
-    dropout: 0.05
-    target_modules: ["q_proj", "v_proj"]
-    
+    enabled: false
+    checkpoint_path: null
+    lora:
+        r: 32
+        alpha: 64
+        dropout: 0.05
+        target_modules: ["q_proj", "v_proj"]
+
 # Dataset Ayarları
 dataset:
-  common_voice:
-    language: "tr"
-    version: "17.0"
-    split_ratio:
-      train: 0.8
-      validation: 0.1
-      test: 0.1
-      
+    common_voice:
+        language: "tr"
+        version: "17.0"
+        split_ratio:
+            train: 0.8
+            validation: 0.1
+            test: 0.1
+
 # Performans ve Optimizasyon
 performance:
-  batch_size: 16
-  num_workers: 4
-  cache_enabled: true
-  cache_dir: "./data/cache"
-  
+    batch_size: 16
+    num_workers: 4
+    cache_enabled: true
+    cache_dir: "./data/cache"
+
 # Logging
 logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  file: "./logs/asr_system.log"
-  console: true
-  format: "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}"
-  rotation: "100 MB"
-  retention: "1 week"
-  
+    level: "INFO" # DEBUG, INFO, WARNING, ERROR
+    file: "./logs/asr_system.log"
+    console: true
+    format: "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}"
+    rotation: "100 MB"
+    retention: "1 week"
+
 # UI Ayarları
 ui:
-  title: "🎤 Konuşma Tanıma Sistemi"
-  theme: "dark"  # light, dark
-  show_advanced_options: false
-  max_upload_size_mb: 200
-  supported_formats: ["wav", "mp3", "m4a", "ogg", "flac"]
-  
+    title: "🎤 Konuşma Tanıma Sistemi"
+    theme: "dark" # light, dark
+    show_advanced_options: false
+    max_upload_size_mb: 200
+    supported_formats: ["wav", "mp3", "m4a", "ogg", "flac"]
+
 # Paths
 paths:
-  data_dir: "./data"
-  models_dir: "./checkpoints"
-  logs_dir: "./logs"
-  cache_dir: "./data/cache"
-  output_dir: "./output"
-
+    data_dir: "./data"
+    models_dir: "./checkpoints"
+    logs_dir: "./logs"
+    cache_dir: "./data/cache"
+    output_dir: "./output"

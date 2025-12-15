@@ -132,6 +132,7 @@ class WhisperASR:
         Config + override parametreleri birleştir.
         """
         # Config'den default parametreler
+        # Not: Whisper API'sine göre sadece desteklenen parametreleri kullan
         params = {
             'language': language or config.get('language.default'),
             'task': self.transcription_config.get('task', 'transcribe'),
@@ -141,7 +142,7 @@ class WhisperASR:
             'patience': self.transcription_config.get('patience', 1.0),
             'length_penalty': self.transcription_config.get('length_penalty', 1.0),
             'compression_ratio_threshold': self.transcription_config.get('compression_ratio_threshold', 2.4),
-            'log_prob_threshold': self.transcription_config.get('log_prob_threshold', -1.0),
+            # 'log_prob_threshold': deprecated in newer Whisper versions
             'no_speech_threshold': self.transcription_config.get('no_speech_threshold', 0.6),
             'condition_on_previous_text': self.transcription_config.get('condition_on_previous_text', True),
             'initial_prompt': self.transcription_config.get('initial_prompt'),
