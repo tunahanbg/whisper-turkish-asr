@@ -82,10 +82,18 @@ def sidebar_settings():
         )
         
         if model_type == "Standard (Faster-Whisper)":
+            # Get current variant from config and find its index
+            options = ["tiny", "base", "small", "medium", "large"]
+            current_variant = config.get('model.variant', 'base')
+            try:
+                current_index = options.index(current_variant)
+            except ValueError:
+                current_index = 1  # fallback to base if variant not in list
+            
             model_variant = st.selectbox(
                 "Model Varyantı",
-                options=["tiny", "base", "small", "medium", "large"],
-                index=1,  # base
+                options=options,
+                index=current_index,
                 help="Büyük modeller daha doğru ama yavaştır"
             )
             
