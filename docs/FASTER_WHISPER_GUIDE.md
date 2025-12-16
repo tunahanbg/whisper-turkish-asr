@@ -266,3 +266,4 @@ Kod değişikliği gerekmez! Factory pattern sayesinde otomatik.
 ✅ **Düşük memory**: int8 ile 4x daha az RAM
 ✅ **Production ready**: Stabil ve güvenilir
 
+
