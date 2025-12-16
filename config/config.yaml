@@ -6,19 +6,19 @@ model:
     # Model seçimi: "whisper" veya "faster-whisper"
     # faster-whisper: 3-4x daha hızlı, daha az memory, int8 quantization
     name: "faster-whisper" # "whisper" | "faster-whisper" | "mlx_whisper"
-    
+
     variant: "base" # tiny, base, small, medium, large (küçük = hızlı)
     device: "cpu" # cpu, cuda (MPS desteklenmiyor)
     compute_type: "int8" # int8 (en hızlı), int16, float16, float32
-    
+
     # Model paths
     download_root: "./checkpoints" # Pre-trained models için
     model_path: null # Custom/fine-tuned model için (örn: "./my_model" veya HF model ID)
-    
+
     # Faster-Whisper özel ayarlar
     num_workers: 1 # Paralel işlem sayısı
     cpu_threads: 4 # CPU thread sayısı
-    
+
     # Alternative models (gelecek için)
     alternatives:
         whisper:
@@ -138,3 +138,54 @@ paths:
     logs_dir: "./logs"
     cache_dir: "./data/cache"
     output_dir: "./output"
+
+# Test ve Değerlendirme (Faz 7)
+evaluation:
+    # Test veri seti
+    test_set_path: "./tests/data/test_set"
+    results_dir: "./tests/data/results"
+
+    # Karşılaştırılacak modeller
+    model_variants: ["tiny", "base", "small", "medium", "large-v3-w4a16"]
+    implementations: ["whisper", "faster-whisper"]
+
+    # Custom models (quantized, fine-tuned)
+    custom_models:
+        large_v3_quantized:
+            name: "whisper" # Use transformers-based WhisperASR
+            variant: "large-v3-w4a16"
+            model_path: "./checkpoints/hf_models/whisper-large-v3-w4a16"
+            device: "mps" # Apple Silicon GPU kullan (CPU yerine 3-5x hızlı!)
+            compute_type: "float16"
+            description: "INT4 quantized large-v3 model (nm-testing/whisper-large-v3.w4a16)"
+
+    # Preprocessing karşılaştırması
+    preprocessing_configs:
+        - name: "no_preprocessing"
+          enabled: false
+        - name: "basic"
+          enabled: true
+          normalize: true
+          trim_silence: true
+          denoise: false
+        - name: "full"
+          enabled: true
+          normalize: true
+          trim_silence: true
+          denoise: true
+          noise_reduction_strength: 0.8
+
+    # Hesaplanacak metrikler
+    metrics:
+        - wer
+        - cer
+        - rtf
+        - latency
+        - cpu_usage
+        - memory_usage
+
+    # Test seti hazırlama
+    dataset_preparation:
+        source_dir: "./data/raw/TR" # FLAC + TXT dosyaları
+        sample_count: 300 # Rastgele seçilecek örnek sayısı
+        seed: 42 # Reproducibility için random seed

@@ -1,0 +1,2 @@
+model_name,model_variant,compute_type,preprocessing_enabled,turkish_wer,turkish_cer,turkish_rtf,cpu_percent,memory_mb,latency_ms,test_set_size,timestamp
+whisper,large-v3-w4a16,float16,False,0.39681698768090523,0.19259150444448164,3.0896863039185605,556.5533333333333,4757.84375,,15,2025-12-16T02:42:42.932772

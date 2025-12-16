@@ -529,8 +529,6 @@ def advanced_preprocessing(audio, sr=16000):
 
 **Test Kategorileri:**
 - WER hesaplama (jiwer kütüphanesi)
-- Farklı gürültü seviyelerinde test
-- Farklı aksanlarla test
 - Uzun/kısa kayıtlar
 - Kod-değiştirme (code-switching) testleri
 

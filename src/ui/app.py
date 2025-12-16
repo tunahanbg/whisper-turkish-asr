@@ -241,19 +241,7 @@ def display_transcription_result(result: dict):
     """Transkripsiyon sonucunu göster."""
     st.success("✅ Transkripsiyon Tamamlandı!")
     
-    # Ana metin - BÜYÜK VE OKUNAKLI
-    st.markdown("### 📝 Transkripsiyon")
-    st.markdown(f"""
-    <div style='background-color: #1E1E1E; padding: 20px; border-radius: 10px; border-left: 4px solid #4CAF50;'>
-        <p style='font-size: 18px; line-height: 1.6; color: #FFFFFF; margin: 0;'>
-            {result['text']}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("") # Spacer
-    
-    # Bilgiler
+    # Bilgiler (üstte göster)
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -268,9 +256,21 @@ def display_transcription_result(result: dict):
     with col4:
         st.metric("⚡ RTF", f"{result['rtf']:.2f}x")
     
-    # Segmentler (varsa)
+    st.markdown("") # Spacer
+    
+    # Ana metin - Collapsible (varsayılan olarak AÇIK)
+    with st.expander("📝 **Transkripsiyon Metni**", expanded=True):
+        st.markdown(f"""
+        <div style='background-color: #1E1E1E; padding: 20px; border-radius: 10px; border-left: 4px solid #4CAF50;'>
+            <p style='font-size: 18px; line-height: 1.6; color: #FFFFFF; margin: 0;'>
+                {result['text']}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Segmentler (varsa) - Collapsible (varsayılan olarak KAPALI)
     if 'segments' in result and result['segments']:
-        with st.expander("📊 Detaylı Segmentler"):
+        with st.expander("📊 Detaylı Segmentler (Zaman Damgalı)", expanded=False):
             for i, seg in enumerate(result['segments'], 1):
                 start_time = format_timestamp(seg['start'])
                 end_time = format_timestamp(seg['end'])
@@ -283,6 +283,7 @@ def display_transcription_result(result: dict):
         data=text_content,
         file_name=f"transcription_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
         mime="text/plain",
+        use_container_width=True
     )
 
 

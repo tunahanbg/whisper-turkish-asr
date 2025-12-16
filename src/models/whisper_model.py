@@ -1,6 +1,7 @@
 """
 Whisper model wrapper.
 DRY: Config-driven, modüler Whisper interface.
+Supports both standard Whisper and custom HuggingFace models (including quantized).
 """
 
 from typing import Optional, Dict, Any, List
@@ -12,11 +13,24 @@ from loguru import logger
 
 from config import config
 
+# HuggingFace transformers için (custom/quantized models)
+try:
+    from transformers import WhisperProcessor, WhisperForConditionalGeneration
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    logger.warning("transformers not installed. Custom model support disabled.")
+
 
 class WhisperASR:
     """
     Whisper model wrapper.
     Config'den tüm parametreleri alır, modelin değişmesi için sadece config güncellenir.
+    
+    Features:
+    - Standard Whisper models (openai/whisper)
+    - Custom HuggingFace models (fine-tuned, quantized)
+    - Automatic model type detection
     """
     
     def __init__(self, custom_config: Optional[Dict[str, Any]] = None):
@@ -34,11 +48,19 @@ class WhisperASR:
         self.compute_type = self.model_config.get('compute_type', 'float16')
         self.download_root = self.model_config.get('download_root', './checkpoints')
         
+        # Custom model path (HuggingFace ID or local path)
+        self.model_path = self.model_config.get('model_path')
+        self.use_transformers = bool(self.model_path)
+        
         # Model henüz yüklenmedi
         self.model = None
+        self.processor = None  # For transformers models
         self._is_loaded = False
         
-        logger.info(f"WhisperASR initialized - Variant: {self.variant}, Device: {self.device}")
+        if self.model_path:
+            logger.info(f"WhisperASR initialized - Custom model: {self.model_path}, Device: {self.device}")
+        else:
+            logger.info(f"WhisperASR initialized - Variant: {self.variant}, Device: {self.device}")
     
     def _get_device(self) -> str:
         """En uygun device'ı belirle."""
@@ -63,17 +85,10 @@ class WhisperASR:
             return
         
         try:
-            logger.info(f"Loading Whisper {self.variant} model...")
-            
-            # Download root dizinini oluştur
-            Path(self.download_root).mkdir(parents=True, exist_ok=True)
-            
-            # Model'i yükle
-            self.model = whisper.load_model(
-                self.variant,
-                device=self.device,
-                download_root=self.download_root,
-            )
+            if self.use_transformers:
+                self._load_transformers_model()
+            else:
+                self._load_standard_model()
             
             self._is_loaded = True
             logger.info(f"Model loaded successfully on {self.device}")
@@ -81,6 +96,83 @@ class WhisperASR:
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
             raise
+    
+    def _load_standard_model(self) -> None:
+        """Load standard OpenAI Whisper model."""
+        logger.info(f"Loading Whisper {self.variant} model...")
+        
+        # Download root dizinini oluştur
+        Path(self.download_root).mkdir(parents=True, exist_ok=True)
+        
+        # Model'i yükle
+        self.model = whisper.load_model(
+            self.variant,
+            device=self.device,
+            download_root=self.download_root,
+        )
+    
+    def _load_transformers_model(self) -> None:
+        """Load custom HuggingFace model (supports quantized models)."""
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "transformers is required for custom models. "
+                "Install with: pip install transformers accelerate"
+            )
+        
+        logger.info(f"Loading HuggingFace model from: {self.model_path}")
+        
+        # Determine torch dtype
+        torch_dtype = torch.float16 if self.compute_type in ['float16', 'fp16'] else torch.float32
+        
+        # Load processor (tokenizer + feature extractor)
+        self.processor = WhisperProcessor.from_pretrained(self.model_path)
+        
+        # Load model (handles quantization automatically)
+        self.model = WhisperForConditionalGeneration.from_pretrained(
+            self.model_path,
+            torch_dtype=torch_dtype,
+            device_map=self.device if self.device != 'mps' else 'cpu',  # MPS not fully supported
+            low_cpu_mem_usage=True,
+        )
+        
+        # Move to device if not using device_map
+        if self.device != 'cuda':
+            self.model = self.model.to(self.device)
+        
+        # BetterTransformer optimization (inference speedup)
+        try:
+            self.model = self.model.to_bettertransformer()
+            logger.info("✅ BetterTransformer enabled (faster inference)")
+        except Exception as e:
+            logger.debug(f"BetterTransformer not available: {e}")
+        
+        # Torch compile (PyTorch 2.0+)
+        if hasattr(torch, 'compile') and self.device in ['cuda', 'mps']:
+            try:
+                self.model = torch.compile(self.model, mode='reduce-overhead')
+                logger.info("✅ Torch compile enabled (PyTorch 2.0+ optimization)")
+            except Exception as e:
+                logger.debug(f"Torch compile not available: {e}")
+        
+        logger.info(f"✅ Custom model loaded: {self.model_path}")
+        logger.info(f"   - Device: {self.device}")
+        logger.info(f"   - Torch dtype: {torch_dtype}")
+        
+        # Check if quantized
+        if hasattr(self.model.config, 'quantization_config'):
+            quant_config = self.model.config.quantization_config
+            try:
+                # Try dict-like access
+                if isinstance(quant_config, dict):
+                    logger.info(f"   - Quantization: {quant_config.get('quant_method', 'unknown')}")
+                else:
+                    # Try object attribute access
+                    if hasattr(quant_config, 'quant_method'):
+                        logger.info(f"   - Quantization: {quant_config.quant_method}")
+                    if hasattr(quant_config, 'config_groups'):
+                        logger.info(f"   - Quantization config detected")
+            except Exception as e:
+                logger.debug(f"Could not read quantization details: {e}")
     
     def transcribe(
         self,
@@ -103,24 +195,92 @@ class WhisperASR:
             self.load()
         
         try:
-            # Config'den transkripsiyon parametrelerini al
-            transcribe_params = self._get_transcribe_params(language, **kwargs)
-            
-            logger.debug(f"Transcribing audio - Language: {language or 'auto'}")
-            
-            # Transkripsiyon yap
-            result = self.model.transcribe(
-                audio,
-                **transcribe_params
-            )
-            
-            logger.info(f"Transcription completed - Detected language: {result.get('language', 'unknown')}")
-            
-            return result
+            if self.use_transformers:
+                return self._transcribe_transformers(audio, language, **kwargs)
+            else:
+                return self._transcribe_standard(audio, language, **kwargs)
             
         except Exception as e:
             logger.error(f"Transcription failed: {e}")
             raise
+    
+    def _transcribe_standard(
+        self,
+        audio: np.ndarray,
+        language: Optional[str] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Transcribe using standard Whisper model."""
+        # Config'den transkripsiyon parametrelerini al
+        transcribe_params = self._get_transcribe_params(language, **kwargs)
+        
+        logger.debug(f"Transcribing audio - Language: {language or 'auto'}")
+        
+        # Transkripsiyon yap
+        result = self.model.transcribe(
+            audio,
+            **transcribe_params
+        )
+        
+        logger.info(f"Transcription completed - Detected language: {result.get('language', 'unknown')}")
+        
+        return result
+    
+    def _transcribe_transformers(
+        self,
+        audio: np.ndarray,
+        language: Optional[str] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Transcribe using HuggingFace transformers model."""
+        logger.debug(f"Transcribing audio with transformers - Language: {language or 'auto'}")
+        
+        # Ensure audio is float32
+        if audio.dtype != np.float32:
+            audio = audio.astype(np.float32)
+        
+        # Process audio
+        inputs = self.processor(
+            audio,
+            sampling_rate=16000,
+            return_tensors="pt"
+        )
+        
+        # Move to device and convert dtype to match model
+        input_features = inputs.input_features.to(self.model.device)
+        if hasattr(self.model, 'dtype'):
+            input_features = input_features.to(self.model.dtype)
+        
+        # Set language token if specified
+        forced_decoder_ids = None
+        if language:
+            forced_decoder_ids = self.processor.get_decoder_prompt_ids(
+                language=language,
+                task="transcribe"
+            )
+        
+        # Generate transcription
+        with torch.no_grad():
+            predicted_ids = self.model.generate(
+                input_features,
+                forced_decoder_ids=forced_decoder_ids,
+                max_length=448,
+            )
+        
+        # Decode
+        transcription = self.processor.batch_decode(
+            predicted_ids,
+            skip_special_tokens=True
+        )[0]
+        
+        logger.info(f"Transcription completed - Language: {language or 'auto'}")
+        
+        # Format output to match standard Whisper format
+        return {
+            'text': transcription,
+            'language': language or 'unknown',
+            'segments': [],  # Transformers don't provide segments by default
+        }
     
     def _get_transcribe_params(
         self,
