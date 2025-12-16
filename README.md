@@ -13,20 +13,27 @@ Bu proje, MacOS M4 Pro platformunda çalışan, **Türkçe** ve **İngilizce** d
 
 ### ✨ Özellikler
 
-- 🇹🇷 **Türkçe Desteği**: Whisper Medium modelinin Türkçe için fine-tune edilmesi
-- 🇬🇧 **İngilizce Desteği**: Yüksek doğruluk oranıyla İngilizce transkripsiyon
+- 🇹🇷 **Türkçe Desteği**: OpenAI Whisper modelleri ile Türkçe transkripsiyon
+- 🇬🇧 **İngilizce Desteği**: Çok dilli model desteği
 - 🎙️ **Gerçek Zamanlı Mikrofon Kaydı**: VAD (Voice Activity Detection) ile otomatik sessizlik algılama
-- 📁 **Ses Dosyası Yükleme**: WAV, MP3, M4A formatlarını destekler
+- 📁 **Ses Dosyası Yükleme**: FLAC, WAV, MP3, M4A formatlarını destekler
 - 🖥️ **Streamlit Arayüzü**: Kullanıcı dostu web tabanlı arayüz
 - 🔒 **Tamamen Yerel**: Bulut API'lerine ihtiyaç duymaz, verileriniz yerel kalır
-- ⚡ **Apple Silicon Optimizasyonu**: M4 Pro üzerinde MPS backend ile hızlandırılmış
+- ⚡ **Faster-Whisper**: CTranslate2 backend ile hızlandırılmış inference
+- 🎯 **Quantized Model**: INT4 quantized large-v3 model desteği (daha doğru, yavaş)
 
-### 🎯 Performans Hedefleri
+### 🎯 Benchmark Sonuçları (300 Örnek)
 
-| Dil | Hedef WER | Model |
-|-----|-----------|-------|
-| 🇹🇷 Türkçe | ≤ %8 (Fine-tune sonrası) | Whisper Medium |
-| 🇬🇧 İngilizce | ≤ %5 | Whisper Medium |
+| Model | WER (Normalized) | RTF | CPU | Memory |
+|-------|-----------------|-----|-----|--------|
+| Faster-Whisper Tiny | 71.09% | 0.093x | 38% | 0.87 GB |
+| Faster-Whisper Base | 52.69% | 0.127x | 45% | 0.84 GB |
+| Faster-Whisper Small | 35.60% | 0.218x | 53% | 0.85 GB |
+| Faster-Whisper Medium | 27.41% | 0.389x | 62% | 0.86 GB |
+| Large-v3 INT4 Quantized | **18.96%** | 33.7x | 92% | 2.1 GB |
+
+> **RTF**: Real-Time Factor (1.0x = gerçek zamanlı)  
+> Quantized model en doğru ama CPU'da çok yavaş
 
 ---
 
@@ -34,13 +41,14 @@ Bu proje, MacOS M4 Pro platformunda çalışan, **Türkçe** ve **İngilizce** d
 
 | Kategori | Teknoloji |
 |----------|-----------|
-| **ASR Modeli** | OpenAI Whisper Medium |
+| **ASR Modeli** | Faster-Whisper (CTranslate2) + Quantized Large-v3 |
 | **VAD** | Silero VAD |
-| **Framework** | PyTorch + MPS (Apple Silicon) |
-| **Fine-tuning** | HuggingFace Transformers + PEFT/LoRA |
-| **UI** | Streamlit |
-| **Ses İşleme** | librosa, pydub, sounddevice |
-| **Dataset** | Mozilla Common Voice Turkish |
+| **Framework** | PyTorch + HuggingFace Transformers |
+| **Quantization** | INT4 (compressed-tensors) |
+| **UI** | Streamlit + streamlit-webrtc |
+| **Ses İşleme** | librosa, sounddevice, pydub |
+| **Test Dataset** | Mozilla Common Voice Turkish (300 samples) |
+| **Evaluation** | WER/CER metrics, resource monitoring |
 
 ---
 
@@ -84,11 +92,53 @@ print(torch.backends.mps.is_available())  # True olmalı
 
 ---
 
+## 💻 Kullanım
+
+### Streamlit UI Başlatma
+
+```bash
+cd src/ui
+streamlit run app.py
+```
+
+Tarayıcınızda `http://localhost:8501` adresine gidin.
+
+### Model Seçimi
+
+UI'da iki model tipi mevcuttur:
+
+1. **Standard (Faster-Whisper)**: Hızlı, CPU-verimli
+   - Tiny, Base, Small, Medium, Large seçenekleri
+   - Önerilen: Medium (WER: %27, RTF: 0.39x)
+
+2. **Quantized Large (INT4)**: En doğru, yavaş
+   - WER: %19 (en iyi doğruluk)
+   - RTF: 33.7x (çok yavaş, CPU-bound)
+
+### Benchmark Çalıştırma
+
+```bash
+# Hızlı test (5 sample)
+python tests/scripts/quick_test.py
+
+# Model karşılaştırma (varsayılan: 150 sample)
+python tests/scripts/compare_models.py --samples 150 --save
+
+# Detaylı benchmark
+python tests/scripts/run_benchmarks.py --mode full
+```
+
+Detaylar: [BENCHMARK_GUIDE.md](BENCHMARK_GUIDE.md)
+
+---
+
 ## 📖 Dokümantasyon
 
 Detaylı proje gereksinimleri, mimari tasarım ve geliştirme fazları için:
 
-👉 [Product Requirements Document (PRD)](docs/PRD_Speech_Recognition_TR_EN.md)
+👉 [Product Requirements Document (PRD)](docs/PRD_Speech_Recognition_TR_EN.md)  
+👉 [Benchmark Guide](BENCHMARK_GUIDE.md)  
+👉 [Test System Documentation](tests/README.md)
 
 ---
 
@@ -97,14 +147,18 @@ Detaylı proje gereksinimleri, mimari tasarım ve geliştirme fazları için:
 ```
 ASR_School_Project/
 ├── src/                    # Kaynak kodlar
-│   ├── audio/             # Ses yakalama ve işleme
-│   ├── models/            # Model yükleme ve inference
-│   ├── preprocessing/     # Ses ön işleme pipeline'ı
+│   ├── audio/             # Ses yakalama ve dosya işleme
+│   ├── models/            # Model yükleme ve inference (Faster-Whisper, Quantized)
+│   ├── preprocessing/     # VAD ve ses ön işleme
 │   └── ui/                # Streamlit arayüzü
-├── data/                  # Dataset ve örnek dosyalar
-├── tests/                 # Test dosyaları
-├── notebooks/             # Jupyter notebook'lar
-├── docs/                  # Dokümantasyon
+├── data/                  # Dataset (raw: 300 FLAC samples)
+├── tests/                 # Test ve evaluation
+│   ├── data/              # Test seti ve sonuçlar
+│   ├── evaluation/        # Benchmarking modülleri
+│   └── scripts/           # Benchmark scriptleri
+├── config/                # Konfigürasyon dosyaları
+├── docs/                  # Proje dokümantasyonu
+├── checkpoints/           # Model checkpoints
 ├── requirements.txt       # Python bağımlılıkları
 └── README.md
 ```
@@ -114,13 +168,13 @@ ASR_School_Project/
 ## 🎯 Geliştirme Fazları
 
 - [x] **Faz 0**: Proje dokümantasyonu (PRD)
-- [ ] **Faz 1**: Ortam kurulumu ve temel altyapı
-- [ ] **Faz 2**: Temel ASR işlevselliği (Whisper Medium)
-- [ ] **Faz 3**: Mikrofon entegrasyonu ve VAD
-- [ ] **Faz 4**: Ses ön işleme pipeline'ı
-- [ ] **Faz 5**: Dataset hazırlığı ve fine-tuning
-- [ ] **Faz 6**: Streamlit arayüzü
-- [ ] **Faz 7**: Test ve değerlendirme
+- [x] **Faz 1**: Ortam kurulumu ve temel altyapı
+- [x] **Faz 2**: Temel ASR işlevselliği (Faster-Whisper)
+- [x] **Faz 3**: Mikrofon entegrasyonu ve VAD
+- [x] **Faz 4**: Ses ön işleme pipeline'ı
+- [x] **Faz 5**: Quantized model entegrasyonu
+- [x] **Faz 6**: Streamlit arayüzü
+- [x] **Faz 7**: Test ve değerlendirme (300 sample benchmark)
 - [ ] **Faz 8**: Dokümantasyon ve rapor
 
 ---
