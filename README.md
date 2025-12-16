@@ -192,23 +192,3 @@ ASR_School_Project/
 Bu proje akademik amaçlarla geliştirilmiştir.
 
 ---
-
-## 👤 İletişim
-
-**Tunahan Başaran Güneysu**  
-Gazi Üniversitesi - Bilgisayar Mühendisliği  
-GitHub: [@tunahanbg](https://github.com/tunahanbg)
-
----
-
-## 🙏 Teşekkürler
-
-- OpenAI Whisper ekibine
-- Mozilla Common Voice topluluğuna
-- Silero VAD geliştiricilerine
-- Gazi Üniversitesi Bilgisayar Mühendisliği Bölümü'ne
-
----
-
-**⭐ Bu projeyi beğendiyseniz, yıldız vermeyi unutmayın!**
-
