@@ -2,7 +2,6 @@
 ### Local Speech-to-Text System with Turkish and English Support
 
 **Gazi Üniversitesi Bilgisayar Mühendisliği**  
-**Tunahan Başaran Güneysu**  
 **Aralık 2025**
 
 ---
