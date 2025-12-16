@@ -72,19 +72,47 @@ def sidebar_settings():
         
         # Model ayarları
         st.subheader("🤖 Model")
-        model_variant = st.selectbox(
-            "Model Varyantı",
-            options=["tiny", "base", "small", "medium", "large"],
-            index=3,  # medium
-            help="Büyük modeller daha doğru ama yavaştır"
+        
+        # Model tipi seçimi
+        model_type = st.radio(
+            "Model Tipi",
+            options=["Standard (Faster-Whisper)", "Quantized Large (INT4) 🚀"],
+            index=0,
+            help="Quantized model daha yavaş ama daha doğru (WER: 46% vs 53%)"
         )
         
-        if model_variant != config.get('model.variant'):
-            if st.button("Model'i Güncelle"):
-                config.set('model.variant', model_variant)
-                if st.session_state.model_manager:
-                    st.session_state.model_manager = None
-                st.rerun()
+        if model_type == "Standard (Faster-Whisper)":
+            model_variant = st.selectbox(
+                "Model Varyantı",
+                options=["tiny", "base", "small", "medium", "large"],
+                index=1,  # base
+                help="Büyük modeller daha doğru ama yavaştır"
+            )
+            
+            # Standard model config
+            if model_variant != config.get('model.variant') or config.get('model.model_path') is not None:
+                if st.button("Model'i Güncelle"):
+                    config.set('model.name', 'faster-whisper')
+                    config.set('model.variant', model_variant)
+                    config.set('model.model_path', None)
+                    config.set('model.device', 'cpu')
+                    if st.session_state.model_manager:
+                        st.session_state.model_manager = None
+                    st.rerun()
+        else:
+            # Quantized model
+            st.info("🎯 **Large-v3 INT4 Quantized**\n- WER: ~46% (daha iyi)\n- GPU optimized (MPS)\n- İlk çalışma yavaş (warm-up)")
+            
+            if config.get('model.variant') != 'large-v3-w4a16':
+                if st.button("Quantized Model'i Yükle"):
+                    config.set('model.name', 'whisper')
+                    config.set('model.variant', 'large-v3-w4a16')
+                    config.set('model.model_path', './checkpoints/hf_models/whisper-large-v3-w4a16')
+                    config.set('model.device', 'mps')
+                    config.set('model.compute_type', 'float16')
+                    if st.session_state.model_manager:
+                        st.session_state.model_manager = None
+                    st.rerun()
         
         st.divider()
         
