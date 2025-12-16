@@ -110,17 +110,21 @@ def sidebar_settings():
                     st.rerun()
         else:
             # Quantized model
-            st.info("🎯 **Large-v3 INT4 Quantized**\n- WER: ~46% (daha iyi)\n- GPU optimized (MPS)\n- İlk çalışma yavaş (warm-up)")
+            st.info("🎯 **Large-v3 INT4 Quantized**\n- WER: ~19% (daha iyi)\n- CPU optimized\n- Daha yavaş ama daha doğru")
+            st.warning("⚠️ Quantized model CPU'da çalışır (daha kararlı)")
             
             if config.get('model.variant') != 'large-v3-w4a16':
                 if st.button("Quantized Model'i Yükle"):
+                    # Completely reset config for quantized model
                     config.set('model.name', 'whisper')
                     config.set('model.variant', 'large-v3-w4a16')
                     config.set('model.model_path', './checkpoints/hf_models/whisper-large-v3-w4a16')
-                    config.set('model.device', 'mps')
+                    config.set('model.device', 'cpu')  # CPU for stability
                     config.set('model.compute_type', 'float16')
+                    # Clear model manager to force reload
                     if st.session_state.model_manager:
                         st.session_state.model_manager = None
+                    st.success("✅ Config güncellendi - Model yenilenecek")
                     st.rerun()
         
         st.divider()

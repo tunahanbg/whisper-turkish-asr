@@ -139,20 +139,10 @@ class WhisperASR:
         if self.device != 'cuda':
             self.model = self.model.to(self.device)
         
-        # BetterTransformer optimization (inference speedup)
-        try:
-            self.model = self.model.to_bettertransformer()
-            logger.info("✅ BetterTransformer enabled (faster inference)")
-        except Exception as e:
-            logger.debug(f"BetterTransformer not available: {e}")
-        
-        # Torch compile (PyTorch 2.0+)
-        if hasattr(torch, 'compile') and self.device in ['cuda', 'mps']:
-            try:
-                self.model = torch.compile(self.model, mode='reduce-overhead')
-                logger.info("✅ Torch compile enabled (PyTorch 2.0+ optimization)")
-            except Exception as e:
-                logger.debug(f"Torch compile not available: {e}")
+        # DISABLE optimizations for quantized models (causes issues)
+        # BetterTransformer and Torch Compile are incompatible with compressed-tensors quantization
+        logger.info("⚠️  Optimizations (BetterTransformer, Torch Compile) disabled for quantized model")
+        logger.info("   Quantized model uses its own optimizations")
         
         logger.info(f"✅ Custom model loaded: {self.model_path}")
         logger.info(f"   - Device: {self.device}")
@@ -233,54 +223,101 @@ class WhisperASR:
         **kwargs
     ) -> Dict[str, Any]:
         """Transcribe using HuggingFace transformers model."""
-        logger.debug(f"Transcribing audio with transformers - Language: {language or 'auto'}")
+        logger.debug(f"Transcribing audio with transformers - Language: {language or 'auto'}, Audio shape: {audio.shape}, dtype: {audio.dtype}")
         
-        # Ensure audio is float32
-        if audio.dtype != np.float32:
+        # Ensure audio is float32 numpy array
+        if not isinstance(audio, np.ndarray):
+            audio = np.array(audio, dtype=np.float32)
+        elif audio.dtype != np.float32:
             audio = audio.astype(np.float32)
         
-        # Process audio
+        # Normalize audio to [-1, 1] range if needed
+        max_val = np.abs(audio).max()
+        if max_val > 0:
+            audio = audio / max(max_val, 1.0)  # Prevent division by values < 1
+        
+        logger.debug(f"Audio normalized - range: [{audio.min():.4f}, {audio.max():.4f}]")
+        
+        # Process audio with processor
         inputs = self.processor(
             audio,
             sampling_rate=16000,
-            return_tensors="pt"
+            return_tensors="pt",
+            return_attention_mask=True  # Generate attention mask
         )
         
-        # Move to device and convert dtype to match model
+        # Move to device and match model dtype
         input_features = inputs.input_features.to(self.model.device)
-        if hasattr(self.model, 'dtype'):
-            input_features = input_features.to(self.model.dtype)
         
-        # Set language token if specified
-        forced_decoder_ids = None
-        if language:
-            forced_decoder_ids = self.processor.get_decoder_prompt_ids(
-                language=language,
-                task="transcribe"
-            )
+        # CRITICAL: Convert to float16 to match quantized model
+        # Quantized model uses float16, but processor outputs float32
+        if self.model.dtype == torch.float16:
+            input_features = input_features.to(torch.float16)
+            logger.debug("Converted input_features to float16 to match model dtype")
+        
+        # Get attention mask if available
+        attention_mask = None
+        if 'attention_mask' in inputs:
+            attention_mask = inputs.attention_mask.to(self.model.device)
+            if self.model.dtype == torch.float16:
+                attention_mask = attention_mask.to(torch.float16)
+        
+        logger.debug(f"Input features shape: {input_features.shape}, device: {input_features.device}, dtype: {input_features.dtype}")
+        
+        # Prepare generation config
+        generate_kwargs = {
+            'max_length': 448,
+            'num_beams': 1,  # Greedy decoding (faster)
+            'do_sample': False,
+        }
+        
+        # Add attention mask if available
+        if attention_mask is not None:
+            generate_kwargs['attention_mask'] = attention_mask
+        
+        # Set language if specified
+        if language and language != 'auto':
+            # Get language token
+            try:
+                lang_token = self.processor.tokenizer.convert_tokens_to_ids(f"<|{language}|>")
+                generate_kwargs['decoder_start_token_id'] = lang_token
+                logger.debug(f"Using language: {language}")
+            except Exception as e:
+                logger.warning(f"Could not set language {language}: {e}")
         
         # Generate transcription
+        logger.debug("Starting generation...")
         with torch.no_grad():
             predicted_ids = self.model.generate(
                 input_features,
-                forced_decoder_ids=forced_decoder_ids,
-                max_length=448,
+                **generate_kwargs
             )
         
-        # Decode
-        transcription = self.processor.batch_decode(
-            predicted_ids,
-            skip_special_tokens=True
-        )[0]
+        logger.debug(f"Generation complete - predicted_ids shape: {predicted_ids.shape}")
         
-        logger.info(f"Transcription completed - Language: {language or 'auto'}")
+        # Decode with better handling
+        try:
+            transcription = self.processor.batch_decode(
+                predicted_ids,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=True
+            )[0].strip()
+            
+            logger.info(f"Transcription completed - Text: '{transcription[:100]}...' (len: {len(transcription)})")
+            logger.debug(f"Full transcription: {transcription}")
+            
+        except Exception as e:
+            logger.error(f"Decoding failed: {e}")
+            transcription = ""
         
         # Format output to match standard Whisper format
-        return {
+        result = {
             'text': transcription,
-            'language': language or 'unknown',
+            'language': language if language and language != 'auto' else 'tr',  # Default to Turkish
             'segments': [],  # Transformers don't provide segments by default
         }
+        
+        return result
     
     def _get_transcribe_params(
         self,

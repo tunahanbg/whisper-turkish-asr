@@ -155,7 +155,7 @@ evaluation:
             name: "whisper" # Use transformers-based WhisperASR
             variant: "large-v3-w4a16"
             model_path: "./checkpoints/hf_models/whisper-large-v3-w4a16"
-            device: "mps" # Apple Silicon GPU kullan (CPU yerine 3-5x hızlı!)
+            device: "cpu" # CPU for stability (MPS has issues with quantized models)
             compute_type: "float16"
             description: "INT4 quantized large-v3 model (nm-testing/whisper-large-v3.w4a16)"
 

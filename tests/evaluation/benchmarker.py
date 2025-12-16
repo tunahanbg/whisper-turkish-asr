@@ -339,9 +339,9 @@ class ASRBenchmarker:
                         'variant': variant,
                         'compute_type': custom_cfg.get('compute_type', 'float16'),
                         'model_path': custom_cfg.get('model_path'),
-                        'device': custom_cfg.get('device', 'cpu'),  # GPU/MPS desteği!
+                        'device': 'cpu',  # Force CPU for quantized models (stability)
                     }
-                    logger.info(f"Using custom model config for {variant} (device: {custom_cfg.get('device', 'cpu')})")
+                    logger.info(f"Using custom model config for {variant} (device: cpu, forced for stability)")
                     break
             
             # Standard model
