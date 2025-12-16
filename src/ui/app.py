@@ -104,6 +104,7 @@ def sidebar_settings():
                     config.set('model.variant', model_variant)
                     config.set('model.model_path', None)
                     config.set('model.device', 'cpu')
+                    config.set('model.compute_type', 'int8')  # faster-whisper için optimal
                     if st.session_state.model_manager:
                         st.session_state.model_manager = None
                     st.rerun()
