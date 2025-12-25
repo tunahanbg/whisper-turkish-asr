@@ -4,7 +4,6 @@ torch>=2.0.0
 torchaudio>=2.0.0
 
 # Alternative Whisper Implementations (for optimization)
-# faster-whisper: CTranslate2-based, 3-4x faster, lower memory
 faster-whisper>=0.10.0
 
 # Audio Processing
@@ -37,11 +36,11 @@ python-dotenv>=1.0.0
 
 # Utilities
 numpy>=1.24.0
-pandas>=2.0.0
-scipy>=1.11.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
-tqdm>=4.66.0
+pandas>=2.0.0  # Used in report_generator for CSV export
+scipy>=1.11.0  # Dependency of librosa
+matplotlib>=3.7.0  # Optional: for visualization (not currently used)
+seaborn>=0.12.0  # Optional: for visualization (not currently used)
+tqdm>=4.66.0  # Progress bars in benchmarks
 
 # Logging and Monitoring
 loguru>=0.7.0

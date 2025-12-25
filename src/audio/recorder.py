@@ -109,7 +109,7 @@ class AudioRecorder:
             self.recorded_audio = []
             self.audio_queue = queue.Queue()
             
-            # Stream'i aç (dtype='float32' ZORUNLU!)
+            # Stream'i aç 
             self.stream = sd.InputStream(
                 device=self.device,
                 channels=self.channels,
@@ -184,7 +184,7 @@ class AudioRecorder:
             was_recording = self.is_recording
             self.is_recording = False
             
-            # Stream'i HER DURUMDA kapat (VAD auto-stop sonrası bile açık kalabiliyor)
+            # Stream'i HER DURUMDA kapat 
             if self.stream:
                 try:
                     logger.debug("Closing audio stream...")

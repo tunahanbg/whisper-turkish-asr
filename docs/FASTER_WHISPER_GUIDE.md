@@ -267,3 +267,4 @@ Kod değişikliği gerekmez! Factory pattern sayesinde otomatik.
 ✅ **Production ready**: Stabil ve güvenilir
 
 
+

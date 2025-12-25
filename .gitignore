@@ -60,6 +60,11 @@ data/cache/
 *.flac
 !data/examples/*.wav  # Örnek dosyalar hariç
 
+# Documentation (optional - keep generated docs out of repo)
+# Uncomment if you want to ignore generated documentation
+# docs/generated/
+# docs/*.pdf
+
 # IDE
 .vscode/
 .idea/
@@ -77,6 +82,7 @@ htmlcov/
 # Logs
 *.log
 logs/
+asr_system.log
 
 # Streamlit
 .streamlit/secrets.toml

@@ -3,8 +3,7 @@
 
 # Model Konfigürasyonu
 model:
-    # Model seçimi: "whisper" veya "faster-whisper"
-    # faster-whisper: 3-4x daha hızlı, daha az memory, int8 quantization
+
     name: "faster-whisper" # "whisper" | "faster-whisper" | "mlx_whisper"
 
     variant: "base" # tiny, base, small, medium, large (küçük = hızlı)
@@ -23,7 +22,7 @@ model:
     alternatives:
         whisper:
             enabled: true
-            notes: "Standard Whisper (느림 ama %95 accuracy)"
+            notes: "Standard Whisper"
         faster_whisper:
             enabled: true
             notes: "CTranslate2 optimized (3-4x hızlı)"
@@ -45,7 +44,6 @@ audio:
 
     # Ön İşleme Ayarları
     # NOT: Preprocessing TAMAMEN DEVRE DIŞI çünkü Whisper kendi preprocessing'ini yapıyor
-    # Dış preprocessing audio'yu bozuyor ve yanlış transkripsiyon üretiyor
     preprocessing:
         enabled: false
         normalize: false
@@ -74,20 +72,18 @@ recording:
 
 # Transkripsiyon Ayarları
 transcription:
-    task: "transcribe" # transcribe veya translate
-    temperature: 0.0 # 0 = deterministik (MPS ile 0.2 NaN hatası veriyor, CPU'da 0.0 güvenli)
+    task: "transcribe" 
+    temperature: 0.0 
     beam_size: 5
     best_of: 5
     patience: 1.0
     length_penalty: 1.0
     compression_ratio_threshold: 2.4
-    # log_prob_threshold: -1.0  # Deprecated in newer Whisper versions
     no_speech_threshold: 0.6
-    condition_on_previous_text: false # TRUE olunca pattern tekrarlarında halüsinasyon yapıyor!
-    initial_prompt: null # Türkçe için: "Merhaba, bugün hava çok güzel."
-    word_timestamps: false # MPS (Apple Silicon) float64 desteklemiyor, DTW ile uyumsuz
+    condition_on_previous_text: false 
+    initial_prompt: null 
+    word_timestamps: false 
 
-# Fine-tuning Ayarları (Gelecek için)
 finetuning:
     enabled: false
     checkpoint_path: null
@@ -155,7 +151,7 @@ evaluation:
             name: "whisper" # Use transformers-based WhisperASR
             variant: "large-v3-w4a16"
             model_path: "./checkpoints/hf_models/whisper-large-v3-w4a16"
-            device: "cpu" # CPU for stability (MPS has issues with quantized models)
+            device: "cpu" # CPU for stability 
             compute_type: "float16"
             description: "INT4 quantized large-v3 model (nm-testing/whisper-large-v3.w4a16)"
 

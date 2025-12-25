@@ -13,7 +13,7 @@ from loguru import logger
 
 from config import config
 
-# HuggingFace transformers için (custom/quantized models)
+# custom/quantized models
 try:
     from transformers import WhisperProcessor, WhisperForConditionalGeneration
     TRANSFORMERS_AVAILABLE = True
@@ -29,7 +29,7 @@ class WhisperASR:
     
     Features:
     - Standard Whisper models (openai/whisper)
-    - Custom HuggingFace models (fine-tuned, quantized)
+    - Custom models (fine-tuned, quantized)
     - Automatic model type detection
     """
     
@@ -139,7 +139,6 @@ class WhisperASR:
         if self.device != 'cuda':
             self.model = self.model.to(self.device)
         
-        # DISABLE optimizations for quantized models (causes issues)
         # BetterTransformer and Torch Compile are incompatible with compressed-tensors quantization
         logger.info("⚠️  Optimizations (BetterTransformer, Torch Compile) disabled for quantized model")
         logger.info("   Quantized model uses its own optimizations")

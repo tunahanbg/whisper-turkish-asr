@@ -3,7 +3,7 @@
 ## Türkçe ve İngilizce Destekli Yerel Konuşma Tanıma Sistemi
 ### Local Speech-to-Text System with Turkish and English Support
 
-**Hazırlayan:** Tunahan  
+**Hazırlayan:** Tunahan, Toprak
 **Kurum:** Gazi Üniversitesi Bilgisayar Mühendisliği  
 **Tarih:** Aralık 2025
 

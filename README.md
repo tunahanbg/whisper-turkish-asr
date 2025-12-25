@@ -2,9 +2,6 @@
 
 ### Local Speech-to-Text System with Turkish and English Support
 
-**Gazi Üniversitesi Bilgisayar Mühendisliği**  
-**Aralık 2025**
-
 ---
 
 ## 📖 Proje Hakkında
@@ -129,7 +126,7 @@ python tests/scripts/compare_models.py --samples 150 --save
 python tests/scripts/run_benchmarks.py --mode full
 ```
 
-Detaylar: [BENCHMARK_GUIDE.md](BENCHMARK_GUIDE.md)
+Detaylar: [BENCHMARK_GUIDE.md](docs/BENCHMARK_GUIDE.md)
 
 ---
 
@@ -137,9 +134,12 @@ Detaylar: [BENCHMARK_GUIDE.md](BENCHMARK_GUIDE.md)
 
 Detaylı proje gereksinimleri, mimari tasarım ve geliştirme fazları için:
 
-👉 [Product Requirements Document (PRD)](docs/PRD_Speech_Recognition_TR_EN.md)  
-👉 [Benchmark Guide](BENCHMARK_GUIDE.md)  
-👉 [Test System Documentation](tests/README.md)
+👉 **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Sistem mimarisi ve modül akışı (BAŞLANGIÇ NOKTASI)  
+👉 [Product Requirements Document (PRD)](docs/PRD_Speech_Recognition_TR_EN.md) - Proje gereksinimleri  
+👉 [DEVELOPMENT.md](DEVELOPMENT.md) - Geliştirme kılavuzu  
+👉 [BENCHMARK_GUIDE.md](docs/BENCHMARK_GUIDE.md) - Benchmark kullanım kılavuzu  
+👉 [CLEANUP_SUMMARY.md](docs/CLEANUP_SUMMARY.md) - Proje temizleme raporu  
+👉 [Test System Documentation](tests/README.md) - Test sistemi detayları
 
 ---
 
@@ -147,20 +147,56 @@ Detaylı proje gereksinimleri, mimari tasarım ve geliştirme fazları için:
 
 ```
 ASR_School_Project/
-├── src/                    # Kaynak kodlar
-│   ├── audio/             # Ses yakalama ve dosya işleme
-│   ├── models/            # Model yükleme ve inference (Faster-Whisper, Quantized)
-│   ├── preprocessing/     # VAD ve ses ön işleme
-│   └── ui/                # Streamlit arayüzü
-├── data/                  # Dataset (raw: 300 FLAC samples)
-├── tests/                 # Test ve evaluation
-│   ├── data/              # Test seti ve sonuçlar
-│   ├── evaluation/        # Benchmarking modülleri
-│   └── scripts/           # Benchmark scriptleri
+├── app.py                 # Streamlit entry point
 ├── config/                # Konfigürasyon dosyaları
-├── docs/                  # Proje dokümantasyonu
-├── checkpoints/           # Model checkpoints
-├── requirements.txt       # Python bağımlılıkları
+│   ├── __init__.py       # Config manager (Singleton pattern)
+│   └── config.yaml       # Ana konfigürasyon
+├── src/                   # Kaynak kodlar
+│   ├── audio/            # Ses yakalama ve dosya işleme
+│   │   ├── file_handler.py  # Dosya yükleme/kaydetme
+│   │   └── recorder.py       # Mikrofon kaydı (VAD destekli)
+│   ├── models/           # Model yönetimi
+│   │   ├── base_asr.py       # Abstract base class
+│   │   ├── model_manager.py  # Factory pattern
+│   │   ├── faster_whisper_model.py  # CTranslate2 (primary)
+│   │   └── whisper_model.py  # Standard + Quantized HF models
+│   ├── preprocessing/    # VAD ve ses ön işleme
+│   │   ├── processor.py      # Audio preprocessing pipeline
+│   │   └── vad.py            # Silero VAD
+│   ├── ui/               # Streamlit arayüzü
+│   │   └── app.py            # Ana UI
+│   └── utils/            # Utility fonksiyonlar
+│       ├── audio_utils.py    # Audio utilities
+│       └── logger_setup.py   # Logging config
+├── tests/                # Test ve evaluation
+│   ├── data/             # Test seti (300 samples) ve sonuçlar
+│   ├── evaluation/       # Benchmarking framework
+│   │   ├── benchmarker.py    # Ana benchmark modülü
+│   │   ├── metrics.py        # WER/CER hesaplama
+│   │   ├── resource_monitor.py  # CPU/Memory monitoring
+│   │   └── report_generator.py  # Rapor oluşturma
+│   └── scripts/          # Benchmark scriptleri
+│       ├── run_benchmarks.py   # Ana benchmark runner
+│       ├── compare_models.py   # Model karşılaştırma
+│       ├── quick_test.py       # Hızlı test
+│       └── prepare_test_set.py # Test seti hazırlama
+├── examples/             # Kullanım örnekleri
+│   └── basic_usage.py    # Programatik kullanım örnekleri
+├── data/                 # Dataset
+│   ├── raw/TR/          # 300 FLAC samples + transcripts
+│   └── cache/           # Geçici dosyalar
+├── checkpoints/          # Model checkpoints
+│   ├── models--Systran--faster-whisper-*/  # Faster-Whisper models
+│   └── quantized_models/whisper-large-v3-w4a16/  # Quantized model
+├── docs/                 # Proje dokümantasyonu
+│   ├── ARCHITECTURE.md       # Sistem mimarisi (START HERE)
+│   ├── BENCHMARK_GUIDE.md    # Benchmark kılavuzu
+│   ├── CLEANUP_SUMMARY.md    # Temizleme raporu
+│   ├── PRD_Speech_Recognition_TR_EN.md  # Gereksinimler
+│   └── FASTER_WHISPER_GUIDE.md          # Implementation guide
+├── logs/                 # Log dosyaları
+├── requirements.txt      # Python bağımlılıkları
+├── DEVELOPMENT.md        # Geliştirme kılavuzu
 └── README.md
 ```
 

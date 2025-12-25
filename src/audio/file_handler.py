@@ -1,6 +1,6 @@
 """
 Audio file handling utilities.
-DRY: Ses dosyası yükleme, kaydetme, format dönüşümü.
+Ses dosyası yükleme, kaydetme, format dönüşümü.
 """
 
 from pathlib import Path
