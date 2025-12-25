@@ -1,25 +1,25 @@
-# 🎤 Türkçe ve İngilizce Konuşma Tanıma Sistemi
+# Turkish and English Speech Recognition System
 
-### Local Speech-to-Text System with Turkish and English Support
+Local Speech-to-Text System with Turkish and English Support
 
 ---
 
-## 📖 Proje Hakkında
+## About
 
-Bu proje, MacOS M4 Pro platformunda çalışan, **Türkçe** ve **İngilizce** destekli yerel bir konuşma tanıma (Speech-to-Text) sistemidir. OpenAI Whisper modelini temel alır ve tamamen yerel olarak çalışarak kullanıcı gizliliğini korur.
+This project is a local speech recognition (Speech-to-Text) system for **Turkish** and **English** languages, running on MacOS M4 Pro. Built on OpenAI Whisper models, it operates completely locally to ensure user privacy.
 
-### ✨ Özellikler
+### Features
 
--   🇹🇷 **Türkçe Desteği**: OpenAI Whisper modelleri ile Türkçe transkripsiyon
--   🇬🇧 **İngilizce Desteği**: Çok dilli model desteği
--   🎙️ **Gerçek Zamanlı Mikrofon Kaydı**: VAD (Voice Activity Detection) ile otomatik sessizlik algılama
--   📁 **Ses Dosyası Yükleme**: FLAC, WAV, MP3, M4A formatlarını destekler
--   🖥️ **Streamlit Arayüzü**: Kullanıcı dostu web tabanlı arayüz
--   🔒 **Tamamen Yerel**: Bulut API'lerine ihtiyaç duymaz, verileriniz yerel kalır
--   ⚡ **Faster-Whisper**: CTranslate2 backend ile hızlandırılmış inference
--   🎯 **Quantized Model**: INT4 quantized large-v3 model desteği (daha doğru, yavaş)
+- Turkish language support with OpenAI Whisper models
+- English language support with multilingual models
+- Real-time microphone recording with VAD (Voice Activity Detection)
+- Audio file upload supporting FLAC, WAV, MP3, M4A formats
+- Streamlit web interface
+- Fully local processing without cloud API dependencies
+- Faster-Whisper with CTranslate2 backend for optimized inference
+- INT4 quantized large-v3 model support for higher accuracy
 
-### 🎯 Benchmark Sonuçları (300 Örnek)
+### Benchmark Results (300 Samples)
 
 | Model                   | WER (Normalized) | RTF    | CPU | Memory  |
 | ----------------------- | ---------------- | ------ | --- | ------- |
@@ -27,206 +27,181 @@ Bu proje, MacOS M4 Pro platformunda çalışan, **Türkçe** ve **İngilizce** d
 | Faster-Whisper Base     | 52.69%           | 0.127x | 45% | 0.84 GB |
 | Faster-Whisper Small    | 35.60%           | 0.218x | 53% | 0.85 GB |
 | Faster-Whisper Medium   | 27.41%           | 0.389x | 62% | 0.86 GB |
-| Large-v3 INT4 Quantized | **18.96%**       | 33.7x  | 92% | 2.1 GB  |
+| Large-v3 INT4 Quantized | 18.96%           | 33.7x  | 92% | 2.1 GB  |
 
-> **RTF**: Real-Time Factor (1.0x = gerçek zamanlı)  
-> Quantized model en doğru ama CPU'da çok yavaş
+RTF: Real-Time Factor (1.0x = real-time)
 
 ---
 
-## 🛠️ Teknoloji Yığını
+## Technology Stack
 
-| Kategori         | Teknoloji                                         |
+| Category         | Technology                                        |
 | ---------------- | ------------------------------------------------- |
-| **ASR Modeli**   | Faster-Whisper (CTranslate2) + Quantized Large-v3 |
-| **VAD**          | Silero VAD                                        |
-| **Framework**    | PyTorch + HuggingFace Transformers                |
-| **Quantization** | INT4 (compressed-tensors)                         |
-| **UI**           | Streamlit + streamlit-webrtc                      |
-| **Ses İşleme**   | librosa, sounddevice, pydub                       |
-| **Test Dataset** | Mozilla Common Voice Turkish (300 samples)        |
-| **Evaluation**   | WER/CER metrics, resource monitoring              |
+| ASR Model        | Faster-Whisper (CTranslate2) + Quantized Large-v3 |
+| VAD              | Silero VAD                                        |
+| Framework        | PyTorch + HuggingFace Transformers                |
+| Quantization     | INT4 (compressed-tensors)                         |
+| UI               | Streamlit + streamlit-webrtc                      |
+| Audio Processing | librosa, sounddevice, pydub                       |
+| Test Dataset     | Mozilla Common Voice Turkish (300 samples)        |
+| Evaluation       | WER/CER metrics, resource monitoring              |
 
 ---
 
-## 📋 Gereksinimler
+## Requirements
 
--   **İşletim Sistemi**: macOS (Apple Silicon M1/M2/M3/M4)
--   **Python**: 3.11+
--   **RAM**: 16GB+ önerilir
--   **Disk Alanı**: ~10GB (model ve dataset için)
+- Operating System: macOS (Apple Silicon M1/M2/M3/M4)
+- Python: 3.11+
+- RAM: 16GB+ recommended
+- Disk Space: ~10GB (for models and dataset)
 
 ---
 
-## 🚀 Kurulum
+## Installation
 
-### 1. Repoyu Klonlayın
+### 1. Clone Repository
 
 ```bash
-git clone https://github.com/tunahanbg/ASR_School_Project.git
-cd ASR_School_Project
+git clone https://github.com/tunahanbg/whisper-turkish-asr.git
+cd whisper-turkish-asr
 ```
 
-### 2. Sanal Ortam Oluşturun
+### 2. Create Virtual Environment
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # macOS/Linux
 ```
 
-### 3. Bağımlılıkları Yükleyin
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. PyTorch MPS Desteğini Kontrol Edin
+### 4. Verify PyTorch MPS Support
 
 ```python
 import torch
-print(torch.backends.mps.is_available())  # True olmalı
+print(torch.backends.mps.is_available())  # Should return True
 ```
 
 ---
 
-## 💻 Kullanım
+## Usage
 
-### Streamlit UI Başlatma
+### Launch Streamlit UI
 
 ```bash
-cd src/ui
 streamlit run app.py
 ```
 
-Tarayıcınızda `http://localhost:8501` adresine gidin.
+Navigate to `http://localhost:8501` in your browser.
 
-### Model Seçimi
+### Model Selection
 
-UI'da iki model tipi mevcuttur:
+Two model types available in the UI:
 
-1. **Standard (Faster-Whisper)**: Hızlı, CPU-verimli
+1. **Standard (Faster-Whisper)**: Fast, CPU-efficient
+   - Options: Tiny, Base, Small, Medium, Large
+   - Recommended: Medium (WER: 27%, RTF: 0.39x)
 
-    - Tiny, Base, Small, Medium, Large seçenekleri
-    - Önerilen: Medium (WER: %27, RTF: 0.39x)
+2. **Quantized Large (INT4)**: Most accurate, slower
+   - WER: 19% (best accuracy)
+   - RTF: 33.7x (very slow, CPU-bound)
 
-2. **Quantized Large (INT4)**: En doğru, yavaş
-    - WER: %19 (en iyi doğruluk)
-    - RTF: 33.7x (çok yavaş, CPU-bound)
-
-### Benchmark Çalıştırma
+### Running Benchmarks
 
 ```bash
-# Hızlı test (5 sample)
+# Quick test (5 samples)
 python tests/scripts/quick_test.py
 
-# Model karşılaştırma (varsayılan: 150 sample)
+# Model comparison (default: 150 samples)
 python tests/scripts/compare_models.py --samples 150 --save
 
-# Detaylı benchmark
+# Full benchmark
 python tests/scripts/run_benchmarks.py --mode full
 ```
 
-Detaylar: [BENCHMARK_GUIDE.md](docs/BENCHMARK_GUIDE.md)
-
 ---
 
-## 📖 Dokümantasyon
-
-Detaylı proje gereksinimleri, mimari tasarım ve geliştirme fazları için:
-
-👉 **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Sistem mimarisi ve modül akışı (BAŞLANGIÇ NOKTASI)  
-👉 [Product Requirements Document (PRD)](docs/PRD_Speech_Recognition_TR_EN.md) - Proje gereksinimleri  
-👉 [DEVELOPMENT.md](DEVELOPMENT.md) - Geliştirme kılavuzu  
-👉 [BENCHMARK_GUIDE.md](docs/BENCHMARK_GUIDE.md) - Benchmark kullanım kılavuzu  
-👉 [CLEANUP_SUMMARY.md](docs/CLEANUP_SUMMARY.md) - Proje temizleme raporu  
-👉 [Test System Documentation](tests/README.md) - Test sistemi detayları
-
----
-
-## 📁 Proje Yapısı
+## Project Structure
 
 ```
-ASR_School_Project/
+whisper-turkish-asr/
 ├── app.py                 # Streamlit entry point
-├── config/                # Konfigürasyon dosyaları
+├── config/                # Configuration files
 │   ├── __init__.py       # Config manager (Singleton pattern)
-│   └── config.yaml       # Ana konfigürasyon
-├── src/                   # Kaynak kodlar
-│   ├── audio/            # Ses yakalama ve dosya işleme
-│   │   ├── file_handler.py  # Dosya yükleme/kaydetme
-│   │   └── recorder.py       # Mikrofon kaydı (VAD destekli)
-│   ├── models/           # Model yönetimi
-│   │   ├── base_asr.py       # Abstract base class
-│   │   ├── model_manager.py  # Factory pattern
-│   │   ├── faster_whisper_model.py  # CTranslate2 (primary)
-│   │   └── whisper_model.py  # Standard + Quantized HF models
-│   ├── preprocessing/    # VAD ve ses ön işleme
-│   │   ├── processor.py      # Audio preprocessing pipeline
-│   │   └── vad.py            # Silero VAD
-│   ├── ui/               # Streamlit arayüzü
-│   │   └── app.py            # Ana UI
-│   └── utils/            # Utility fonksiyonlar
-│       ├── audio_utils.py    # Audio utilities
-│       └── logger_setup.py   # Logging config
-├── tests/                # Test ve evaluation
-│   ├── data/             # Test seti (300 samples) ve sonuçlar
+│   └── config.yaml       # Main configuration
+├── src/                   # Source code
+│   ├── audio/            # Audio capture and file handling
+│   │   ├── file_handler.py
+│   │   └── recorder.py
+│   ├── models/           # Model management
+│   │   ├── base_asr.py
+│   │   ├── model_manager.py
+│   │   ├── faster_whisper_model.py
+│   │   └── whisper_model.py
+│   ├── preprocessing/    # VAD and audio preprocessing
+│   │   ├── processor.py
+│   │   └── vad.py
+│   ├── ui/               # Streamlit interface
+│   │   └── app.py
+│   └── utils/            # Utility functions
+│       ├── audio_utils.py
+│       └── logger_setup.py
+├── tests/                # Testing and evaluation
+│   ├── data/             # Test set (300 samples) and results
 │   ├── evaluation/       # Benchmarking framework
-│   │   ├── benchmarker.py    # Ana benchmark modülü
-│   │   ├── metrics.py        # WER/CER hesaplama
-│   │   ├── resource_monitor.py  # CPU/Memory monitoring
-│   │   └── report_generator.py  # Rapor oluşturma
-│   └── scripts/          # Benchmark scriptleri
-│       ├── run_benchmarks.py   # Ana benchmark runner
-│       ├── compare_models.py   # Model karşılaştırma
-│       ├── quick_test.py       # Hızlı test
-│       └── prepare_test_set.py # Test seti hazırlama
-├── examples/             # Kullanım örnekleri
-│   └── basic_usage.py    # Programatik kullanım örnekleri
+│   │   ├── benchmarker.py
+│   │   ├── metrics.py
+│   │   ├── resource_monitor.py
+│   │   └── report_generator.py
+│   └── scripts/          # Benchmark scripts
+│       ├── run_benchmarks.py
+│       ├── compare_models.py
+│       ├── quick_test.py
+│       └── prepare_test_set.py
+├── examples/             # Usage examples
+│   └── basic_usage.py
 ├── data/                 # Dataset
 │   ├── raw/TR/          # 300 FLAC samples + transcripts
-│   └── cache/           # Geçici dosyalar
+│   └── cache/           # Temporary files
 ├── checkpoints/          # Model checkpoints
-│   ├── models--Systran--faster-whisper-*/  # Faster-Whisper models
-│   └── quantized_models/whisper-large-v3-w4a16/  # Quantized model
-├── docs/                 # Proje dokümantasyonu
-│   ├── ARCHITECTURE.md       # Sistem mimarisi (START HERE)
-│   ├── BENCHMARK_GUIDE.md    # Benchmark kılavuzu
-│   ├── CLEANUP_SUMMARY.md    # Temizleme raporu
-│   ├── PRD_Speech_Recognition_TR_EN.md  # Gereksinimler
-│   └── FASTER_WHISPER_GUIDE.md          # Implementation guide
-├── logs/                 # Log dosyaları
-├── requirements.txt      # Python bağımlılıkları
-├── DEVELOPMENT.md        # Geliştirme kılavuzu
+│   ├── models--Systran--faster-whisper-*
+│   └── quantized_models/whisper-large-v3-w4a16
+├── logs/                 # Log files
+├── requirements.txt      # Python dependencies
 └── README.md
 ```
 
 ---
 
-## 🎯 Geliştirme Fazları
+## Development Phases
 
--   [x] **Faz 0**: Proje dokümantasyonu (PRD)
--   [x] **Faz 1**: Ortam kurulumu ve temel altyapı
--   [x] **Faz 2**: Temel ASR işlevselliği (Faster-Whisper)
--   [x] **Faz 3**: Mikrofon entegrasyonu ve VAD
--   [x] **Faz 4**: Ses ön işleme pipeline'ı
--   [x] **Faz 5**: Quantized model entegrasyonu
--   [x] **Faz 6**: Streamlit arayüzü
--   [x] **Faz 7**: Test ve değerlendirme (300 sample benchmark)
--   [ ] **Faz 8**: Dokümantasyon ve rapor
-
----
-
-## 📊 Kullanılan Dataset
-
--   **Mozilla Common Voice Turkish v17.0**
-    -   134 saat Türkçe ses kaydı
-    -   1,790 benzersiz konuşmacı
-    -   Creative Commons Zero (CC-0) lisanslı
+- [x] Phase 0: Project documentation (PRD)
+- [x] Phase 1: Environment setup and infrastructure
+- [x] Phase 2: Core ASR functionality (Faster-Whisper)
+- [x] Phase 3: Microphone integration and VAD
+- [x] Phase 4: Audio preprocessing pipeline
+- [x] Phase 5: Quantized model integration
+- [x] Phase 6: Streamlit interface
+- [x] Phase 7: Testing and evaluation (300 sample benchmark)
+- [x] Phase 8: Documentation and reporting
 
 ---
 
-## 📝 Lisans
+## Dataset
 
-Bu proje akademik amaçlarla geliştirilmiştir.
+**Mozilla Common Voice Turkish v17.0**
+- 134 hours of Turkish audio
+- 1,790 unique speakers
+- Licensed under Creative Commons Zero (CC-0)
+
+---
+
+## License
+
+This project is developed for academic purposes.
 
 ---

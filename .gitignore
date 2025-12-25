@@ -60,10 +60,8 @@ data/cache/
 *.flac
 !data/examples/*.wav  # Örnek dosyalar hariç
 
-# Documentation (optional - keep generated docs out of repo)
-# Uncomment if you want to ignore generated documentation
-# docs/generated/
-# docs/*.pdf
+# Documentation (internal use only)
+docs/
 
 # IDE
 .vscode/
