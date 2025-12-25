@@ -10,14 +10,14 @@ This project is a local speech recognition (Speech-to-Text) system for **Turkish
 
 ### Features
 
-- Turkish language support with OpenAI Whisper models
-- English language support with multilingual models
-- Real-time microphone recording with VAD (Voice Activity Detection)
-- Audio file upload supporting FLAC, WAV, MP3, M4A formats
-- Streamlit web interface
-- Fully local processing without cloud API dependencies
-- Faster-Whisper with CTranslate2 backend for optimized inference
-- INT4 quantized large-v3 model support for higher accuracy
+-   Turkish language support with OpenAI Whisper models
+-   English language support with multilingual models
+-   Real-time microphone recording with VAD (Voice Activity Detection)
+-   Audio file upload supporting FLAC, WAV, MP3, M4A formats
+-   Streamlit web interface
+-   Fully local processing without cloud API dependencies
+-   Faster-Whisper with CTranslate2 backend for optimized inference
+-   INT4 quantized large-v3 model support for higher accuracy
 
 ### Benchmark Results (300 Samples)
 
@@ -50,10 +50,10 @@ RTF: Real-Time Factor (1.0x = real-time)
 
 ## Requirements
 
-- Operating System: macOS (Apple Silicon M1/M2/M3/M4)
-- Python: 3.11+
-- RAM: 16GB+ recommended
-- Disk Space: ~10GB (for models and dataset)
+-   Operating System: macOS (Apple Silicon M1/M2/M3/M4)
+-   Python: 3.11+
+-   RAM: 16GB+ recommended
+-   Disk Space: ~10GB (for models and dataset)
 
 ---
 
@@ -103,12 +103,13 @@ Navigate to `http://localhost:8501` in your browser.
 Two model types available in the UI:
 
 1. **Standard (Faster-Whisper)**: Fast, CPU-efficient
-   - Options: Tiny, Base, Small, Medium, Large
-   - Recommended: Medium (WER: 27%, RTF: 0.39x)
+
+    - Options: Tiny, Base, Small, Medium, Large
+    - Recommended: Medium (WER: 27%, RTF: 0.39x)
 
 2. **Quantized Large (INT4)**: Most accurate, slower
-   - WER: 19% (best accuracy)
-   - RTF: 33.7x (very slow, CPU-bound)
+    - WER: 19% (best accuracy)
+    - RTF: 33.7x (very slow, CPU-bound)
 
 ### Running Benchmarks
 
@@ -179,29 +180,37 @@ whisper-turkish-asr/
 
 ## Development Phases
 
-- [x] Phase 0: Project documentation (PRD)
-- [x] Phase 1: Environment setup and infrastructure
-- [x] Phase 2: Core ASR functionality (Faster-Whisper)
-- [x] Phase 3: Microphone integration and VAD
-- [x] Phase 4: Audio preprocessing pipeline
-- [x] Phase 5: Quantized model integration
-- [x] Phase 6: Streamlit interface
-- [x] Phase 7: Testing and evaluation (300 sample benchmark)
-- [x] Phase 8: Documentation and reporting
+-   [x] Phase 0: Project documentation (PRD)
+-   [x] Phase 1: Environment setup and infrastructure
+-   [x] Phase 2: Core ASR functionality (Faster-Whisper)
+-   [x] Phase 3: Microphone integration and VAD
+-   [x] Phase 4: Audio preprocessing pipeline
+-   [x] Phase 5: Quantized model integration
+-   [x] Phase 6: Streamlit interface
+-   [x] Phase 7: Testing and evaluation (300 sample benchmark)
+-   [x] Phase 8: Documentation and reporting
 
 ---
 
 ## Dataset
 
 **Mozilla Common Voice Turkish v17.0**
-- 134 hours of Turkish audio
-- 1,790 unique speakers
-- Licensed under Creative Commons Zero (CC-0)
+
+-   134 hours of Turkish audio
+-   1,790 unique speakers
+-   Licensed under Creative Commons Zero (CC-0)
 
 ---
 
 ## License
 
 This project is developed for academic purposes.
+
+---
+
+## Authors
+
+- Tunahan Büyükgebiz - [tunahanbg](https://github.com/tunahanbg)
+- Toprak Necat Gök - [T-Necat](https://github.com/T-Necat)
 
 ---
